@@ -63,7 +63,7 @@ class Star{
     var position = Offset(0F, 0F)
     var size: Int = 1
     fun generate() {
-        size = (1..5).random()
+        size = (1..BRIGHTNESS_MAX+1).random()
         val x = (0..1000).random().toFloat()
         val y = (0..1000).random().toFloat()
         position = Offset(x, y)
@@ -91,10 +91,15 @@ fun WearApp(){
         temp.generate()
         stars.add(temp)
     }
+
+    var settingsOpen by remember {
+        mutableStateOf(false)
+    }
+
+    val settingsState = arrayOf(0,0,0,0)
+
     SkyMapTheme {
-        var settingsOpen by remember {
-            mutableStateOf(false)
-        }
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -104,41 +109,32 @@ fun WearApp(){
         ) {
             if(settingsOpen)
             {
-                Text(
-                    modifier = Modifier.fillMaxWidth(),
-                    textAlign = TextAlign.Center,
-                    color = Color.White,
-                    text = "Star brightness"
+                Menu(
+                    settingsState,
+                    {i,v -> settingsState[i] = v},
+                    {settingsOpen = false}
                 )
-                var button_text by remember { mutableStateOf(brightness.toString()) }
-                Button(
-                    onClick = { brightness++
-                        brightness %= 5
-                        button_text = brightness.toString()
-                    },
-                    colors = ButtonDefaults.buttonColors(backgroundColor = Color.White),
-                )
-                {
-                    Text(button_text, textAlign = TextAlign.Center, color = Color.Black)
-                }
-                Button(
-                    onClick = {
-                        settingsOpen = false
-                    },
-                    colors = ButtonDefaults.buttonColors(backgroundColor = Color.White),
-                )
-                {
-                    Text("X", textAlign = TextAlign.Center, color = Color.Black)
-                }
             }
             else
             {
+                brightness = settingsState[INDEX_BRIGHTNESS]
+                val backgroundColor =
+                    if (settingsState[INDEX_COLOR] == 0)
+                        Color(0f,0f,0.2f,1f)
+                    else
+                        Color.Black
+                val starColor =
+                    if (settingsState[INDEX_COLOR] == 0)
+                        Color.White
+                    else
+                        Color.Red
+
                 Canvas(
                     modifier = Modifier
                         .fillMaxSize()
                         .pointerInput("Drag") {
                             detectDragGestures { _, dragAmount ->
-                                positionOffset -= dragAmount
+                                positionOffset -= dragAmount / zoom
                             }
                         }
 
@@ -150,16 +146,19 @@ fun WearApp(){
                                 onDoubleTap = { offset ->
                                     positionOffset += offset - watchCenter
                                     zoom++
+                                    if (zoom > 5f) {
+                                        zoom = 1f
+                                    }
                                 }
                             )
                         }
                 ) {
-                    drawCircle(color = Color.Blue, radius = 225F)
+                    drawCircle(color = backgroundColor, radius = 225F)
                     for(s in stars)
                     {
                         if(s.size > brightness)
                             drawCircle(
-                                color = Color.White,
+                                color = starColor,
                                 radius = s.size.toFloat(),
                                 center = (s.position - positionOffset) * zoom + watchCenter
                             )
