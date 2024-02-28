@@ -143,8 +143,7 @@ fun Menu(menuState: Array<Int>, changeState: (Int, Int) -> Unit, menuExit: () ->
                     var index by remember { mutableIntStateOf(menuState[3]) }
                     Button(
                         modifier = Modifier
-                            .fillMaxSize()
-                            .padding(all = Dp(0.0f)),
+                            .fillMaxSize(),
                         onClick = {
                             index++
                             index %= 2
@@ -154,9 +153,9 @@ fun Menu(menuState: Array<Int>, changeState: (Int, Int) -> Unit, menuExit: () ->
                             backgroundColor = Color.DarkGray,
                             contentColor = cols[index],
                         )) {
-                        Icon(painter = painterResource(id = R.drawable.brightness_4),
+                        Icon(painter = painterResource(id = R.drawable.eye),
                             "",
-                            modifier = Modifier.fillMaxSize())
+                            modifier = Modifier.fillMaxSize().padding(all = Dp(5f)))
                     }
                 }
             }
