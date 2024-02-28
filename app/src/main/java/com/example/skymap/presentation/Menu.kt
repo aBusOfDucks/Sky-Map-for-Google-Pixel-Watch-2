@@ -27,6 +27,7 @@ import kotlinx.coroutines.launch
 import kotlin.math.abs
 import androidx.compose.animation.core.Animatable
 import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.lazy.grid.LazyHorizontalGrid
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.ui.Modifier
@@ -85,8 +86,8 @@ fun Menu(menuState: Array<Int>, changeState: (Int, Int) -> Unit, menuExit: () ->
         .offset(Dp(0f), Dp(offsetY.value))
     )
     {
-        LazyVerticalGrid(
-            columns = GridCells.Fixed(2),
+        LazyHorizontalGrid(
+            rows = GridCells.Fixed(2),
             modifier = Modifier
                 .fillMaxSize()
                 .padding(all = Dp(19.0f))
