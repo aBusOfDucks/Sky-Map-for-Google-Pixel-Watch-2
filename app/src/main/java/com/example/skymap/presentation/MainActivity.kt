@@ -43,10 +43,14 @@ import androidx.wear.compose.material.TimeText
 import com.example.skymap.R
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.core.widget.EdgeEffectCompat.getDistance
 import androidx.wear.compose.material.ButtonDefaults
 import com.example.skymap.presentation.theme.SkyMapTheme
+import kotlin.math.cos
+import kotlin.math.sin
+import kotlin.random.Random
 
-
+const val WATCHFACE_RADIOUS = 225.0
 
 
 class MainActivity : ComponentActivity() {
@@ -65,11 +69,19 @@ class MainActivity : ComponentActivity() {
 class Star{
     var position = Offset(0F, 0F)
     var size: Int = 1
+    var r: Float = 0.0F
+    var alpha: Float = 0.0F
+
     fun generate() {
         size = (1..BRIGHTNESS_MAX+1).random()
-        val x = (0..1000).random().toFloat()
-        val y = (0..1000).random().toFloat()
-        position = Offset(x, y)
+        r = ((WATCHFACE_RADIOUS - Math.pow(WATCHFACE_RADIOUS, Random.nextDouble())) * (Random.nextDouble() / 2.0 + 0.5)).toFloat()
+        alpha = (Random.nextFloat() * 2.0 * Math.PI).toFloat()
+    }
+
+    fun calculat_position(user_center : Offset, zoom : Float): Offset {
+        var x = zoom * r * cos(alpha)
+        var y = zoom * r * sin(alpha)
+        return Offset(x, y) + user_center
     }
 }
 
@@ -78,9 +90,9 @@ class Star{
 fun WearApp(){
     var brightness: Int = 0
     val stars = mutableListOf<Star>()
-    val watchCenter = Offset(225F, 225F)
+    val watchCenter = Offset(WATCHFACE_RADIOUS.toFloat(), WATCHFACE_RADIOUS.toFloat())
     var positionOffset by remember {
-        mutableStateOf(Offset(0f, 0f))
+        mutableStateOf(Offset(WATCHFACE_RADIOUS.toFloat(), WATCHFACE_RADIOUS.toFloat()))
     }
     var zoom by remember {
         mutableFloatStateOf(1F)
@@ -88,7 +100,7 @@ fun WearApp(){
 
 
     // Random data for prototype
-    for( i in (0..500))
+    for( i in (0..250))
     {
         val temp: Star = Star()
         temp.generate()
@@ -137,7 +149,12 @@ fun WearApp(){
                         .fillMaxSize()
                         .pointerInput("Drag") {
                             detectDragGestures { _, dragAmount ->
-                                positionOffset -= dragAmount / zoom
+                                var newPosition = positionOffset + dragAmount / zoom
+                                newPosition -= watchCenter
+                                if (newPosition.getDistanceSquared() <= Math.pow((zoom - 1) * WATCHFACE_RADIOUS, 2.0))
+                                {
+                                    positionOffset += dragAmount / zoom
+                                }
                             }
                         }
 
@@ -156,7 +173,7 @@ fun WearApp(){
                             )
                         }
                 ) {
-                    drawCircle(color = backgroundColor, radius = 225F)
+                    drawCircle(color = backgroundColor, radius = WATCHFACE_RADIOUS.toFloat())
                     for(s in stars)
                     {
                         if(s.size > brightness)
@@ -184,7 +201,7 @@ fun WearApp(){
                             drawCircle(
                                 color = col,
                                 radius = size,
-                                center = (s.position - positionOffset) * zoom + watchCenter
+                                center = s.calculat_position(positionOffset, zoom)
                             )
                         }
                     }
