@@ -25,6 +25,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import android.util.Log
+import android.view.MotionEvent
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
@@ -33,6 +34,7 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.tooling.preview.Devices
 import androidx.compose.ui.tooling.preview.Preview
@@ -45,20 +47,55 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.wear.compose.material.ButtonDefaults
 import com.example.skymap.presentation.theme.SkyMapTheme
-
-
+import com.google.android.wearable.input.RotaryEncoderHelper
+import kotlin.math.max
+import kotlin.math.min
 
 
 class MainActivity : ComponentActivity() {
-
+    private val stars : ArrayList<Star> = ArrayList()
+    private var settingsOpen : Boolean = false
+    private var rotaryAngle = 2f
+    private val zoom = PackedFloat(1f)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Random data for prototype
+        for( i in (0..500))
+        {
+            val temp: Star = Star()
+            temp.generate()
+            stars.add(temp)
+        }
+        setCanvas()
+    }
+
+    private fun setCanvas() {
         setContent {
-            WearApp()
+            WearApp(stars, zoom) {
+                settingsOpen = !settingsOpen
+            }
         }
     }
 
+    private fun update() {
+        if (!settingsOpen) {
+            setCanvas()
+        }
+    }
+
+    override fun onGenericMotionEvent(event: MotionEvent?): Boolean {
+        if (event?.action == MotionEvent.ACTION_SCROLL && RotaryEncoderHelper.isFromRotaryEncoder(event)) {
+            val delta = RotaryEncoderHelper.getRotaryAxisValue(event)
+            rotaryAngle -= delta
+            rotaryAngle = max(2f, min(rotaryAngle, 10f))
+            zoom.v = rotaryAngle * 0.5f
+            update()
+
+            return true
+        }
+        return super.onGenericMotionEvent(event)
+    }
 }
 
 // Placeholder for prototype
@@ -73,33 +110,32 @@ class Star{
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
+class PackedFloat(var v: Float) {
+}
+
+
 @Composable
-fun WearApp(){
+fun WearApp(stars: ArrayList<Star>, pZoom : PackedFloat, toggleMenu: () -> Unit) {
     var brightness: Int = 0
-    val stars = mutableListOf<Star>()
     val watchCenter = Offset(225F, 225F)
     var positionOffset by remember {
         mutableStateOf(Offset(0f, 0f))
     }
     var zoom by remember {
-        mutableFloatStateOf(1F)
-    }
-
-
-    // Random data for prototype
-    for( i in (0..500))
-    {
-        val temp: Star = Star()
-        temp.generate()
-        stars.add(temp)
+        mutableFloatStateOf(pZoom.v)
     }
 
     var settingsOpen by remember {
         mutableStateOf(false)
     }
 
-    val settingsState = arrayOf(0,0,0,0)
+    val settingsState = remember {
+        mutableStateListOf(0,0,0,0)
+    }
+
+    if (zoom != pZoom.v) {
+        zoom = pZoom.v
+    }
 
     SkyMapTheme {
 
@@ -113,9 +149,12 @@ fun WearApp(){
             if(settingsOpen)
             {
                 Menu(
-                    settingsState,
+                    settingsState.toTypedArray(),
                     {i,v -> settingsState[i] = v},
-                    {settingsOpen = false}
+                    {
+                        settingsOpen = false
+                        toggleMenu()
+                    }
                 )
             }
             else
@@ -145,6 +184,7 @@ fun WearApp(){
                             detectTapGestures(
                                 onLongPress = {
                                     settingsOpen = true
+                                    toggleMenu()
                                 },
                                 onDoubleTap = { offset ->
                                     positionOffset += offset - watchCenter
@@ -152,6 +192,7 @@ fun WearApp(){
                                     if (zoom > 5f) {
                                         zoom = 1f
                                     }
+                                    pZoom.v = zoom
                                 }
                             )
                         }
@@ -172,13 +213,13 @@ fun WearApp(){
                                 }
                                 1 -> {
                                     size = s.size.toFloat()
-                                    val x = s.size * 35
-                                    col = Color(rgb(x, x, x))
+                                    val x = s.size.toFloat() / (BRIGHTNESS_MAX+1).toFloat()
+                                    col = Color(x * starColor.red, x * starColor.green, x * starColor.blue)
                                 }
                                 2 -> {
                                     size = 3F
-                                    val x = s.size * 35
-                                    col = Color(rgb(x, x, x))
+                                    val x = s.size.toFloat() / (BRIGHTNESS_MAX+1).toFloat()
+                                    col = Color(x * starColor.red, x * starColor.green, x * starColor.blue)
                                 }
                             }
                             drawCircle(
@@ -192,11 +233,12 @@ fun WearApp(){
             }
         }
     }
-
 }
 
 @Preview(device = Devices.WEAR_OS_SMALL_ROUND, showSystemUi = true)
 @Composable
 fun DefaultPreview() {
-    WearApp()
+    WearApp(ArrayList(), PackedFloat(1f)) {
+
+    }
 }

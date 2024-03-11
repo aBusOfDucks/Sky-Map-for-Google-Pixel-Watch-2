@@ -26,6 +26,7 @@ import androidx.wear.compose.material.Icon
 import kotlinx.coroutines.launch
 import kotlin.math.abs
 import androidx.compose.animation.core.Animatable
+import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.lazy.grid.LazyHorizontalGrid
 import androidx.compose.runtime.Composable
@@ -33,6 +34,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.Dp
 import com.example.skymap.R
+import com.example.skymap.presentation.theme.SkyMapTheme
 
 
 const val INDEX_CONSTELLATION = 0
@@ -52,7 +54,6 @@ fun Menu(menuState: Array<Int>, changeState: (Int, Int) -> Unit, menuExit: () ->
         Animatable(0f)
     }
     val coroutineScope = rememberCoroutineScope()
-
     Box(modifier = Modifier
         .fillMaxSize()
         .draggable(
@@ -67,7 +68,7 @@ fun Menu(menuState: Array<Int>, changeState: (Int, Int) -> Unit, menuExit: () ->
                 }
             }),
             orientation = Orientation.Vertical,
-            onDragStopped = {_ ->
+            onDragStopped = { _ ->
                 // Jeżeli użytkownik przestanie przesuwać menu,
                 // to robimy animację elementu z powrotem do
                 // punktu startowego
@@ -101,7 +102,7 @@ fun Menu(menuState: Array<Int>, changeState: (Int, Int) -> Unit, menuExit: () ->
                         R.drawable.constellation_text
                     ),
                     startState = menuState[0],
-                    onClick = {i -> changeState(0, i)},
+                    onClick = { i -> changeState(0, i) },
                     padding = 2.5f
                 )
             }
@@ -112,7 +113,7 @@ fun Menu(menuState: Array<Int>, changeState: (Int, Int) -> Unit, menuExit: () ->
                         R.drawable.planet_no
                     ),
                     startState = menuState[1],
-                    onClick = {i -> changeState(1, i)},
+                    onClick = { i -> changeState(1, i) },
                     padding = 7.5f
                 )
             }
@@ -128,17 +129,18 @@ fun Menu(menuState: Array<Int>, changeState: (Int, Int) -> Unit, menuExit: () ->
                         R.drawable.brightness_6,
                     ),
                     startState = menuState[2],
-                    onClick = {i -> changeState(2, i)},
+                    onClick = { i -> changeState(2, i) },
                     padding = 2.5f
                 )
             }
             item {
                 val cols = arrayOf(Color.White, Color.Red)
-                Box(modifier =
-                Modifier
-                    .fillMaxSize()
-                    .aspectRatio(1.0f)
-                    .padding(all = Dp(2.5f))
+                Box(
+                    modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .aspectRatio(1.0f)
+                        .padding(all = Dp(2.5f))
                 ) {
                     var index by remember { mutableIntStateOf(menuState[3]) }
                     Button(
@@ -152,10 +154,15 @@ fun Menu(menuState: Array<Int>, changeState: (Int, Int) -> Unit, menuExit: () ->
                         colors = ButtonDefaults.buttonColors(
                             backgroundColor = Color.DarkGray,
                             contentColor = cols[index],
-                        )) {
-                        Icon(painter = painterResource(id = R.drawable.eye),
+                        )
+                    ) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.eye),
                             "",
-                            modifier = Modifier.fillMaxSize().padding(all = Dp(5f)))
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(all = Dp(5f))
+                        )
                     }
                 }
             }
