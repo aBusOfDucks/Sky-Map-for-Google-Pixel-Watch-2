@@ -6,6 +6,7 @@
 
 package com.example.skymap.presentation
 
+import android.graphics.Color.rgb
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -44,6 +45,8 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.wear.compose.material.ButtonDefaults
 import com.example.skymap.presentation.theme.SkyMapTheme
+
+
 
 
 class MainActivity : ComponentActivity() {
@@ -157,11 +160,33 @@ fun WearApp(){
                     for(s in stars)
                     {
                         if(s.size > brightness)
+                        {
+                            var size = 1F
+                            var col = starColor
+                            val DISPLAY_MODE_TEST = 2
+
+                            when(DISPLAY_MODE_TEST) {
+                                0 -> {
+                                    size = s.size.toFloat()
+                                    col = starColor
+                                }
+                                1 -> {
+                                    size = s.size.toFloat()
+                                    val x = s.size * 35
+                                    col = Color(rgb(x, x, x))
+                                }
+                                2 -> {
+                                    size = 3F
+                                    val x = s.size * 35
+                                    col = Color(rgb(x, x, x))
+                                }
+                            }
                             drawCircle(
-                                color = starColor,
-                                radius = s.size.toFloat(),
+                                color = col,
+                                radius = size,
                                 center = (s.position - positionOffset) * zoom + watchCenter
                             )
+                        }
                     }
                 }
             }
