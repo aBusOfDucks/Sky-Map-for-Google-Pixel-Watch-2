@@ -55,7 +55,6 @@ import kotlin.math.min
 class MainActivity : ComponentActivity() {
     private val stars : ArrayList<Star> = ArrayList()
     private var settingsOpen : Boolean = false
-    private var rotaryAngle = 2f
     private val zoom = PackedFloat(1f)
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -87,9 +86,8 @@ class MainActivity : ComponentActivity() {
     override fun onGenericMotionEvent(event: MotionEvent?): Boolean {
         if (event?.action == MotionEvent.ACTION_SCROLL && RotaryEncoderHelper.isFromRotaryEncoder(event)) {
             val delta = RotaryEncoderHelper.getRotaryAxisValue(event)
-            rotaryAngle -= delta
-            rotaryAngle = max(2f, min(rotaryAngle, 10f))
-            zoom.v = rotaryAngle * 0.5f
+            zoom.v -= delta * 0.5f
+            zoom.v = max(1f, min(zoom.v, 5f))
             update()
 
             return true
