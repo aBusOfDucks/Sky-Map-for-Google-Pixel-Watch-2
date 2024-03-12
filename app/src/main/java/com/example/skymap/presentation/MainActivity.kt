@@ -6,17 +6,13 @@
 
 package com.example.skymap.presentation
 
-import android.graphics.Color.rgb
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -24,29 +20,18 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import android.util.Log
 import android.view.MotionEvent
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.tooling.preview.Devices
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.wear.compose.material.Button
 import androidx.wear.compose.material.MaterialTheme
-import androidx.wear.compose.material.Text
-import androidx.wear.compose.material.TimeText
-import com.example.skymap.R
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.core.widget.EdgeEffectCompat.getDistance
-import androidx.wear.compose.material.ButtonDefaults
 import com.example.skymap.presentation.theme.SkyMapTheme
 import com.google.android.wearable.input.RotaryEncoderHelper
 import kotlin.math.max
@@ -55,7 +40,7 @@ import kotlin.math.cos
 import kotlin.math.sin
 import kotlin.random.Random
 
-const val WATCHFACE_RADIOUS = 225.0
+const val WATCHFACE_RADIUS = 225.0
 
 
 class MainActivity : ComponentActivity() {
@@ -111,7 +96,7 @@ class Star{
 
     fun generate() {
         size = (1..BRIGHTNESS_MAX+1).random()
-        r = ((WATCHFACE_RADIOUS - Math.pow(WATCHFACE_RADIOUS, Random.nextDouble())) * (Random.nextDouble() / 2.0 + 0.5)).toFloat()
+        r = ((WATCHFACE_RADIUS - Math.pow(WATCHFACE_RADIUS, Random.nextDouble())) * (Random.nextDouble() / 2.0 + 0.5)).toFloat()
         alpha = (Random.nextFloat() * 2.0 * Math.PI).toFloat()
     }
 
@@ -129,9 +114,9 @@ class PackedFloat(var v: Float) {
 @Composable
 fun WearApp(stars: ArrayList<Star>, pZoom : PackedFloat, toggleMenu: () -> Unit) {
     var brightness: Int = 0
-    val watchCenter = Offset(WATCHFACE_RADIOUS.toFloat(), WATCHFACE_RADIOUS.toFloat())
+    val watchCenter = Offset(WATCHFACE_RADIUS.toFloat(), WATCHFACE_RADIUS.toFloat())
     var positionOffset by remember {
-        mutableStateOf(Offset(WATCHFACE_RADIOUS.toFloat(), WATCHFACE_RADIOUS.toFloat()))
+        mutableStateOf(Offset(WATCHFACE_RADIUS.toFloat(), WATCHFACE_RADIUS.toFloat()))
     }
     var zoom by remember {
         mutableFloatStateOf(pZoom.v)
@@ -188,11 +173,11 @@ fun WearApp(stars: ArrayList<Star>, pZoom : PackedFloat, toggleMenu: () -> Unit)
                         .fillMaxSize()
                         .pointerInput("Drag") {
                             detectDragGestures { _, dragAmount ->
-                                var newPosition = positionOffset + dragAmount / zoom
+                                var newPosition = positionOffset + dragAmount
                                 newPosition -= watchCenter
-                                if (newPosition.getDistanceSquared() <= Math.pow((zoom - 1) * WATCHFACE_RADIOUS, 2.0))
+                                if (newPosition.getDistanceSquared() <= Math.pow((zoom - 1) * WATCHFACE_RADIUS, 2.0))
                                 {
-                                    positionOffset += dragAmount / zoom
+                                    positionOffset += dragAmount
                                 }
                             }
                         }
@@ -214,7 +199,7 @@ fun WearApp(stars: ArrayList<Star>, pZoom : PackedFloat, toggleMenu: () -> Unit)
                             )
                         }
                 ) {
-                    drawCircle(color = backgroundColor, radius = WATCHFACE_RADIOUS.toFloat())
+                    drawCircle(color = backgroundColor, radius = WATCHFACE_RADIUS.toFloat())
                     for(s in stars)
                     {
                         if(s.size > brightness)
