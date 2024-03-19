@@ -6,10 +6,18 @@
 
 package com.example.skymap.presentation
 
+import android.hardware.Sensor
+import android.hardware.SensorEvent
+import android.hardware.SensorEventListener
+import android.hardware.SensorManager
+import android.opengl.Matrix
 import Converter
 import EquatorialCoordinates
 import HorizontalCoordinates
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
@@ -37,6 +45,8 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.pointer.pointerInput
 import com.example.skymap.presentation.theme.SkyMapTheme
 import com.google.android.wearable.input.RotaryEncoderHelper
+import kotlin.math.PI
+import kotlin.math.acos
 import java.io.IOException
 import java.time.LocalDateTime
 import java.time.ZoneId
@@ -57,6 +67,58 @@ class MainActivity : ComponentActivity() {
     private val stars : ArrayList<Star> = ArrayList()
     private var settingsOpen : Boolean = false
     private val zoom = PackedFloat(1f)
+    private lateinit var sensorManager: SensorManager
+    private var azimuth = 0f
+    private var vertAngle = 0f
+    private var displayedAzimuth = 0f
+    private val handler = Handler(Looper.getMainLooper())
+    private val updateTask = object : Runnable {
+        override fun run() {
+            orientationUpdate()
+            handler.postDelayed(this, 40)
+        }
+    }
+    private val starTask = object : Runnable {
+        override fun run() {
+            // TODO: Tutaj wstawić obliczenie gwiazd
+            Log.d("Star", "Star update requested")
+            // Na razie co 5 sekund
+            handler.postDelayed(this, 5000)
+        }
+    }
+
+    private val sensorListener : SensorEventListener = object : SensorEventListener {
+        private val rotationVector = FloatArray(4)
+        private val rotationMatrix = FloatArray(16)
+        private val normalVector = FloatArray(4)
+        private val transformedNormal = FloatArray(4)
+        private val orientationAngles = FloatArray(3)
+
+        override fun onSensorChanged(event: SensorEvent) {
+            if (event.sensor.type == Sensor.TYPE_ROTATION_VECTOR) {
+                System.arraycopy(event.values, 0, rotationVector, 0, rotationVector.size)
+                SensorManager.getRotationMatrixFromVector(rotationMatrix, rotationVector)
+                normalVector[0] = 0f
+                normalVector[1] = 0f
+                normalVector[2] = 1f
+                normalVector[3] = 0f
+                Matrix.multiplyMV(
+                    transformedNormal, 0,
+                    rotationMatrix, 0,
+                    normalVector, 0
+                )
+                SensorManager.getOrientation(rotationMatrix, orientationAngles)
+                azimuth = orientationAngles[0]
+                vertAngle = acos(transformedNormal[2])
+            }
+        }
+
+        override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {
+            // Dokładność czujnika się zmieniła
+            // Interfejs tego wymaga
+        }
+
+    }
 
     // Funkcja, która wczytuje plik JSON i zwraca JSON jako String
     private fun loadJSONFromAnotherFile(fileName: String): String? {
@@ -73,6 +135,8 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        sensorManager = getSystemService(SENSOR_SERVICE) as SensorManager
+        // Random data for prototype
 
         val latitude = 52.0 // N
         val longitude = 21.0 // E
@@ -114,21 +178,14 @@ class MainActivity : ComponentActivity() {
         }
 
 
-        /*// Random data for prototype
-        for( i in (0..500))
-        {
-            val temp: Star = Star()
-            temp.generate()
-            stars.add(temp)
-        }*/
-
-
         setCanvas()
     }
 
     private fun setCanvas() {
+        // Powinno być uwzględnione w wyświetlaniu.
+        val watchUpsideDown = vertAngle > PI.toFloat() - 1f
         setContent {
-            WearApp(stars, zoom) {
+            WearApp(stars, zoom, displayedAzimuth) {
                 settingsOpen = !settingsOpen
             }
         }
@@ -137,6 +194,13 @@ class MainActivity : ComponentActivity() {
     private fun update() {
         if (!settingsOpen) {
             setCanvas()
+        }
+    }
+
+    private fun orientationUpdate() {
+        if (vertAngle < 1f && zoom.v == 1f) {
+            displayedAzimuth = blendAngles(displayedAzimuth, azimuth, 0.2f)
+            update()
         }
     }
 
@@ -151,6 +215,44 @@ class MainActivity : ComponentActivity() {
         }
         return super.onGenericMotionEvent(event)
     }
+
+    override fun onResume() {
+        val sensor = sensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR)
+        if (sensor != null) {
+            sensorManager.registerListener(
+                sensorListener,
+                sensor,
+                SensorManager.SENSOR_DELAY_NORMAL,
+                SensorManager.SENSOR_DELAY_UI
+            )
+        }
+        handler.post(updateTask)
+        handler.post(starTask)
+        super.onResume()
+    }
+
+    override fun onPause() {
+        sensorManager.unregisterListener(sensorListener)
+        handler.removeCallbacks(updateTask)
+        handler.removeCallbacks(starTask)
+        super.onPause()
+    }
+}
+
+fun shiftAngle(a: Float) : Float {
+    var res = a
+    while (res > PI.toFloat()) {
+        res -= 2 * PI.toFloat()
+    }
+    while (res <= -PI.toFloat()) {
+        res += 2 * PI.toFloat()
+    }
+    return res
+}
+
+fun blendAngles(a1: Float, a2: Float, weight: Float) : Float{
+    val diff = shiftAngle(a2 - a1)
+    return shiftAngle(a1 + weight * diff)
 }
 
 // Placeholder for prototype
@@ -170,9 +272,9 @@ class Star {
         alpha = azimuth.toFloat()
     }
 
-    fun calculat_position(user_center : Offset, zoom : Float): Offset {
-        var x = zoom * r * cos(alpha)
-        var y = zoom * r * sin(alpha)
+    fun calculat_position(user_center : Offset, zoom : Float, phi : Float): Offset {
+        val x = zoom * r * cos(alpha + phi)
+        val y = zoom * r * sin(alpha + phi)
         return Offset(x, y) + user_center
     }
 }
@@ -182,7 +284,7 @@ class PackedFloat(var v: Float) {
 
 
 @Composable
-fun WearApp(stars: ArrayList<Star>, pZoom : PackedFloat, toggleMenu: () -> Unit) {
+fun WearApp(stars: ArrayList<Star>, pZoom : PackedFloat, azimuth: Float, toggleMenu: () -> Unit) {
     var brightness: Int = 0
     val watchCenter = Offset(WATCHFACE_RADIUS.toFloat(), WATCHFACE_RADIUS.toFloat())
     var positionOffset by remember {
@@ -297,7 +399,7 @@ fun WearApp(stars: ArrayList<Star>, pZoom : PackedFloat, toggleMenu: () -> Unit)
                             drawCircle(
                                 color = col,
                                 radius = size,
-                                center = s.calculat_position(positionOffset, zoom)
+                                center = s.calculat_position(positionOffset, zoom, -azimuth)
                             )
                         }
                     }
@@ -310,7 +412,7 @@ fun WearApp(stars: ArrayList<Star>, pZoom : PackedFloat, toggleMenu: () -> Unit)
 @Preview(device = Devices.WEAR_OS_SMALL_ROUND, showSystemUi = true)
 @Composable
 fun DefaultPreview() {
-    WearApp(ArrayList(), PackedFloat(1f)) {
+    WearApp(ArrayList(), PackedFloat(1f), 0f) {
 
     }
 }
