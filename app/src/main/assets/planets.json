@@ -1,0 +1,156 @@
+{
+  "planets": [
+    {
+      "name": "Mercury",
+      "orbit_elements": {
+        "a_au": 0.38709927,
+        "e": 0.20563593,
+        "I_deg": 7.00497902,
+        "L_deg": 252.25032350,
+        "long_peri_deg": 77.45779628,
+        "long_node_deg": 48.33076593
+      },
+      "rate_of_change": {
+        "a_au_per_cy": 0.00000037,
+        "e_per_cy": 0.00001906,
+        "I_deg_per_cy": -0.00594749,
+        "L_deg_per_cy": 149472.67411175,
+        "long_peri_deg_per_cy": 0.16047689,
+        "long_node_deg_per_cy": -0.12534081
+      }
+    },
+    {
+      "name": "Venus",
+      "orbit_elements": {
+        "a_au": 0.72333566,
+        "e": 0.00677672,
+        "I_deg": 3.39467605,
+        "L_deg": 181.97909950,
+        "long_peri_deg": 131.60246718,
+        "long_node_deg": 76.67984255
+      },
+      "rate_of_change": {
+        "a_au_per_cy": 0.00000390,
+        "e_per_cy": -0.00004107,
+        "I_deg_per_cy": -0.00078890,
+        "L_deg_per_cy": 58517.81538729,
+        "long_peri_deg_per_cy": 0.00268329,
+        "long_node_deg_per_cy": -0.27769418
+      }
+    },
+    {
+      "name": "Earth",
+      "orbit_elements": {
+        "a_au": 1.00000261,
+        "e": 0.01671123,
+        "I_deg": -0.00001531,
+        "L_deg": 100.46457166,
+        "long_peri_deg": 102.93768193,
+        "long_node_deg": 0.0
+      },
+      "rate_of_change": {
+        "a_au_per_cy": 0.00000562,
+        "e_per_cy": -0.00004392,
+        "I_deg_per_cy": -0.01294668,
+        "L_deg_per_cy": 35999.37244981,
+        "long_peri_deg_per_cy": 0.32327364,
+        "long_node_deg_per_cy": 0.0
+      }
+    },
+    {
+      "name": "Mars",
+      "orbit_elements": {
+        "a_au": 1.52371034,
+        "e": 0.09339410,
+        "I_deg": 1.84969142,
+        "L_deg": -4.55343205,
+        "long_peri_deg": 335.25836,
+        "long_node_deg": 49.55953891
+      },
+      "rate_of_change": {
+        "a_au_per_cy": 0.00001847,
+        "e_per_cy": 0.00007882,
+        "I_deg_per_cy": -0.00813131,
+        "L_deg_per_cy": 19140.30268499,
+        "long_peri_deg_per_cy": 0.44441088,
+        "long_node_deg_per_cy": -0.29257343
+      }
+    },
+    {
+      "name": "Jupiter",
+      "orbit_elements": {
+        "a_au": 5.20288700,
+        "e": 0.04838624,
+        "I_deg": 1.30439695,
+        "L_deg": 34.39644051,
+        "long_peri_deg": 14.75385,
+        "long_node_deg": 100.47390909
+      },
+      "rate_of_change": {
+        "a_au_per_cy": -0.00011607,
+        "e_per_cy": -0.00013253,
+        "I_deg_per_cy": -0.00183714,
+        "L_deg_per_cy": 3034.74612775,
+        "long_peri_deg_per_cy": 0.21252668,
+        "long_node_deg_per_cy": 0.20469106
+      }
+    },
+    {
+      "name": "Saturn",
+      "orbit_elements": {
+        "a_au": 9.53667594,
+        "e": 0.05386179,
+        "I_deg": 2.48599187,
+        "L_deg": 49.95424423,
+        "long_peri_deg": 89.40705,
+        "long_node_deg": 113.66242448
+      },
+      "rate_of_change": {
+        "a_au_per_cy": -0.00125060,
+        "e_per_cy": -0.00050991,
+        "I_deg_per_cy": 0.00193609,
+        "L_deg_per_cy": 1222.49362201,
+        "long_peri_deg_per_cy": -0.41897216,
+        "long_node_deg_per_cy": -0.28867794
+      }
+    },
+    {
+      "name": "Uranus",
+      "orbit_elements": {
+        "a_au": 19.18916464,
+        "e": 0.04725744,
+        "I_deg": 0.77263783,
+        "L_deg": 313.23810451,
+        "long_peri_deg": 170.95427630,
+        "long_node_deg": 74.01692503
+      },
+      "rate_of_change": {
+        "a_au_per_cy": -0.00196176,
+        "e_per_cy": -0.00004397,
+        "I_deg_per_cy": -0.00242939,
+        "L_deg_per_cy": 428.48202785,
+        "long_peri_deg_per_cy": 0.40805281,
+        "long_node_deg_per_cy": 0.04240589
+      }
+    },
+    {
+      "name": "Neptune",
+      "orbit_elements": {
+        "a_au": 30.06992276,
+        "e": 0.00859048,
+        "I_deg": 1.77004347,
+        "L_deg": -55.12002969,
+        "long_peri_deg": 44.96476227,
+        "long_node_deg": 131.78422574
+      },
+      "rate_of_change": {
+        "a_au_per_cy": 0.00026291,
+        "e_per_cy": 0.00005105,
+        "I_deg_per_cy": 0.00035372,
+        "L_deg_per_cy": 218.45945325,
+        "long_peri_deg_per_cy": -0.32241464,
+        "long_node_deg_per_cy": -0.00508664
+      }
+    }
+  ]
+}
