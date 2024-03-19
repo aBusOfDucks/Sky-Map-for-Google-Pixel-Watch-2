@@ -63,4 +63,10 @@ dependencies {
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
+
+    implementation("androidx.appcompat:appcompat:1.4.1")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.3.0")
+    implementation("com.google.code.gson:gson:2.8.9")
+    implementation("org.decimal4j:decimal4j:1.0.3")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.3.0")
 }

@@ -6,6 +6,9 @@
 
 package com.example.skymap.presentation
 
+import Converter
+import EquatorialCoordinates
+import HorizontalCoordinates
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -34,11 +37,18 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.pointer.pointerInput
 import com.example.skymap.presentation.theme.SkyMapTheme
 import com.google.android.wearable.input.RotaryEncoderHelper
+import java.io.IOException
+import java.time.LocalDateTime
+import java.time.ZoneId
+import java.time.ZonedDateTime
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.cos
 import kotlin.math.sin
 import kotlin.random.Random
+import com.google.gson.JsonParser
+import java.time.LocalTime
+import java.time.ZoneOffset
 
 const val WATCHFACE_RADIUS = 225.0
 
@@ -48,15 +58,71 @@ class MainActivity : ComponentActivity() {
     private var settingsOpen : Boolean = false
     private val zoom = PackedFloat(1f)
 
+    // Funkcja, która wczytuje plik JSON i zwraca JSON jako String
+    private fun loadJSONFromAnotherFile(fileName: String): String? {
+        var json: String? = null
+        try {
+            val inputStream = assets.open(fileName)
+            json = inputStream.bufferedReader().use { it.readText() }
+            inputStream.close()
+        } catch (e: IOException) {
+            e.printStackTrace()
+        }
+        return json
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        // Random data for prototype
+
+        val latitude = 52.0 // N
+        val longitude = 21.0 // E
+
+        //val localDateTime = LocalDateTime.of(2000, 1, 1, 18, 0,0, 0)
+        val localDateTime = LocalDateTime.now(ZoneOffset.UTC)
+        val zoneId = ZoneId.of("GMT")
+        val zonedDateTime = ZonedDateTime.of(localDateTime, zoneId)
+
+        val converter = Converter(latitude, longitude, zonedDateTime)
+
+        val starsFile = loadJSONFromAnotherFile("stars.json")
+        val jsonStars = JsonParser.parseString(starsFile).asJsonObject
+
+        val starsArray: com.google.gson.JsonArray? = jsonStars.getAsJsonArray("stars")
+
+
+        starsArray?.forEach { star ->
+
+            val starJsonObject = star.asJsonObject
+            //val name: String = starJsonObject.getAsJsonPrimitive("name").asString
+            val coordinates = starJsonObject.getAsJsonObject("coordinates")
+            val dec: Double = coordinates.asJsonObject.getAsJsonPrimitive("dec").asDouble
+            val ra: Double = coordinates.asJsonObject.getAsJsonPrimitive("ra").asDouble
+            val mag: Double = starJsonObject.getAsJsonPrimitive("vmag").asDouble
+
+            val equatorialCoordinates = EquatorialCoordinates(
+                rightAscension = ra,
+                declination = dec
+            )
+
+            val horizontalCoordinates = converter.equatorialToHorizontal(equatorialCoordinates)
+
+            if (horizontalCoordinates.altitude > 0) {
+                val temp: Star = Star()
+                temp.generate(mag, horizontalCoordinates.azimuth, horizontalCoordinates.altitude)
+                stars.add(temp)
+            }
+        }
+
+
+        /*// Random data for prototype
         for( i in (0..500))
         {
             val temp: Star = Star()
             temp.generate()
             stars.add(temp)
-        }
+        }*/
+
+
         setCanvas()
     }
 
@@ -88,16 +154,20 @@ class MainActivity : ComponentActivity() {
 }
 
 // Placeholder for prototype
-class Star{
+class Star {
     var position = Offset(0F, 0F)
     var size: Int = 1
     var r: Float = 0.0F
     var alpha: Float = 0.0F
 
-    fun generate() {
-        size = (1..BRIGHTNESS_MAX+1).random()
-        r = ((WATCHFACE_RADIUS - Math.pow(WATCHFACE_RADIUS, Random.nextDouble())) * (Random.nextDouble() / 2.0 + 0.5)).toFloat()
-        alpha = (Random.nextFloat() * 2.0 * Math.PI).toFloat()
+    fun generate(mag: Double, azimuth: Double, altitude: Double) {
+        //size = (1..BRIGHTNESS_MAX+1).random()
+
+        size = BRIGHTNESS_MAX - mag.toInt()
+        //r = ((WATCHFACE_RADIUS - Math.pow(WATCHFACE_RADIUS, Random.nextDouble())) * (Random.nextDouble() / 2.0 + 0.5)).toFloat()
+        r = (Math.cos(altitude) * WATCHFACE_RADIUS).toFloat()
+        //alpha = (Random.nextFloat() * 2.0 * Math.PI).toFloat()
+        alpha = azimuth.toFloat()
     }
 
     fun calculat_position(user_center : Offset, zoom : Float): Offset {
