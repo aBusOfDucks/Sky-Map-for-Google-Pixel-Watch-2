@@ -301,7 +301,7 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun orientationUpdate() {
-        if (vertAngle < 1f && zoom.v == 1f) {
+        if ((vertAngle < 1f || vertAngle > PI.toFloat() - 1f) && zoom.v == 1f) {
             displayedAzimuth = blendAngles(displayedAzimuth, azimuth, 0.2f)
             update()
         }
@@ -360,6 +360,8 @@ fun blendAngles(a1: Float, a2: Float, weight: Float) : Float{
     return shiftAngle(a1 + weight * diff)
 }
 
+val PROJECTION: Projection = EquidistantAzimuthalProjection()
+
 // Placeholder for prototype
 class Star {
     var position = Offset(0F, 0F)
@@ -372,7 +374,7 @@ class Star {
 
         size = BRIGHTNESS_MAX - mag.toInt()
         //r = ((WATCHFACE_RADIUS - Math.pow(WATCHFACE_RADIUS, Random.nextDouble())) * (Random.nextDouble() / 2.0 + 0.5)).toFloat()
-        r = (Math.cos(altitude) * WATCHFACE_RADIUS).toFloat()
+        r = (PROJECTION.convert(altitude) * WATCHFACE_RADIUS).toFloat()
         //alpha = (Random.nextFloat() * 2.0 * Math.PI).toFloat()
         alpha = azimuth.toFloat()
     }
