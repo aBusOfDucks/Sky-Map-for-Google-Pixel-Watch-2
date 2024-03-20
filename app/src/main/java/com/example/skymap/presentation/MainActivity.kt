@@ -14,6 +14,9 @@ import android.opengl.Matrix
 import Converter
 import EquatorialCoordinates
 import HorizontalCoordinates
+import android.Manifest
+import android.content.pm.PackageManager
+import android.location.Location
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -32,6 +35,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import android.view.MotionEvent
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectDragGestures
@@ -43,7 +47,14 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.wear.compose.material.MaterialTheme
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.core.content.ContextCompat
 import com.example.skymap.presentation.theme.SkyMapTheme
+import com.google.android.gms.location.FusedLocationProviderClient
+import com.google.android.gms.location.LocationCallback
+import com.google.android.gms.location.LocationRequest
+import com.google.android.gms.location.LocationResult
+import com.google.android.gms.location.LocationServices
+import com.google.android.gms.location.Priority
 import com.google.android.wearable.input.RotaryEncoderHelper
 import kotlin.math.PI
 import kotlin.math.acos
@@ -59,6 +70,7 @@ import kotlin.random.Random
 import com.google.gson.JsonParser
 import java.time.LocalTime
 import java.time.ZoneOffset
+import kotlin.math.abs
 
 const val WATCHFACE_RADIUS = 225.0
 
@@ -80,9 +92,8 @@ class MainActivity : ComponentActivity() {
     }
     private val starTask = object : Runnable {
         override fun run() {
-            // TODO: Tutaj wstawić obliczenie gwiazd
-            Log.d("Star", "Star update requested")
-            // Na razie co 5 sekund
+            calculateStars()
+            update()
             handler.postDelayed(this, 5000)
         }
     }
@@ -120,6 +131,84 @@ class MainActivity : ComponentActivity() {
 
     }
 
+    // Lokalizacja
+    // Daje lokalizację z różnych źródeł
+    private lateinit var fusedLocationClient: FusedLocationProviderClient
+    private lateinit var locationRequest: LocationRequest
+    private val locationCallback = object : LocationCallback() {
+        override fun onLocationResult(result: LocationResult) {
+            for (location in result.locations) {
+                latitude = location.latitude
+                longitude = location.longitude
+                calculateStars()
+                update()
+            }
+        }
+    }
+
+    private var latitude = 0.0
+    private var longitude = 0.0
+
+    private val locationPermissionRequest = registerForActivityResult(
+        ActivityResultContracts.RequestMultiplePermissions()
+    ) { permissions ->
+        when {
+            permissions.getOrDefault(Manifest.permission.ACCESS_FINE_LOCATION, false) -> {
+                requestLocationUpdates()
+            }
+            permissions.getOrDefault(Manifest.permission.ACCESS_COARSE_LOCATION, false) -> {
+                requestLocationUpdates()
+            }
+            else -> {
+                // Nie mamy uprawnień
+                requestLocationPermission()
+            }
+        }
+    }
+
+    //
+    private fun requestLocationPermission() {
+        if (ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.ACCESS_COARSE_LOCATION
+            ) != PackageManager.PERMISSION_GRANTED
+            &&
+            ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.ACCESS_FINE_LOCATION
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            locationPermissionRequest.launch(
+                arrayOf(
+                    Manifest.permission.ACCESS_COARSE_LOCATION,
+                    Manifest.permission.ACCESS_FINE_LOCATION
+                )
+            )
+        }
+    }
+
+    private fun requestLocationUpdates() {
+        if (ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.ACCESS_COARSE_LOCATION
+            ) == PackageManager.PERMISSION_GRANTED
+            ||
+            ContextCompat.checkSelfPermission(
+                this,
+                Manifest.permission.ACCESS_FINE_LOCATION
+            ) == PackageManager.PERMISSION_GRANTED
+        ) {
+            fusedLocationClient.requestLocationUpdates(
+                locationRequest,
+                locationCallback,
+                Looper.getMainLooper()
+            )
+        }
+        else {
+            requestLocationPermission()
+        }
+    }
+
     // Funkcja, która wczytuje plik JSON i zwraca JSON jako String
     private fun loadJSONFromAnotherFile(fileName: String): String? {
         var json: String? = null
@@ -133,15 +222,9 @@ class MainActivity : ComponentActivity() {
         return json
     }
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        sensorManager = getSystemService(SENSOR_SERVICE) as SensorManager
-        // Random data for prototype
+    private fun calculateStars() {
+        Log.d("Star", "Calculating stars $latitude $longitude")
 
-        val latitude = 52.0 // N
-        val longitude = 21.0 // E
-
-        //val localDateTime = LocalDateTime.of(2000, 1, 1, 18, 0,0, 0)
         val localDateTime = LocalDateTime.now(ZoneOffset.UTC)
         val zoneId = ZoneId.of("GMT")
         val zonedDateTime = ZonedDateTime.of(localDateTime, zoneId)
@@ -153,6 +236,7 @@ class MainActivity : ComponentActivity() {
 
         val starsArray: com.google.gson.JsonArray? = jsonStars.getAsJsonArray("stars")
 
+        stars.clear()
 
         starsArray?.forEach { star ->
 
@@ -176,7 +260,26 @@ class MainActivity : ComponentActivity() {
                 stars.add(temp)
             }
         }
+    }
 
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        sensorManager = getSystemService(SENSOR_SERVICE) as SensorManager
+
+        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
+
+        val builder = com.google.android.gms.location.LocationRequest.Builder(1000)
+        // Na emulatorze działa tylko HIGH_ACCURACY
+        builder.setPriority(Priority.PRIORITY_HIGH_ACCURACY)
+        // To znaczy że chcemy prosić o lokalizację w nieskończoność
+        builder.setDurationMillis(Long.MAX_VALUE)
+        // Musimy się przesunąć o 1km
+        builder.setMinUpdateDistanceMeters(1000f)
+        locationRequest = builder.build()
+
+        requestLocationPermission()
+
+        calculateStars()
 
         setCanvas()
     }
@@ -228,6 +331,7 @@ class MainActivity : ComponentActivity() {
         }
         handler.post(updateTask)
         handler.post(starTask)
+        requestLocationUpdates()
         super.onResume()
     }
 
@@ -235,6 +339,7 @@ class MainActivity : ComponentActivity() {
         sensorManager.unregisterListener(sensorListener)
         handler.removeCallbacks(updateTask)
         handler.removeCallbacks(starTask)
+        fusedLocationClient.removeLocationUpdates(locationCallback)
         super.onPause()
     }
 }
