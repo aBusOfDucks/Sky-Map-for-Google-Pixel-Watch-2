@@ -72,16 +72,19 @@ import java.time.LocalTime
 import java.time.ZoneOffset
 import kotlin.math.abs
 
-const val WATCHFACE_RADIUS = 225.0
+const val WATCHFACE_RADIUS = 192.0
 
+const val LOCK_ANGLE = 1f
 
 class MainActivity : ComponentActivity() {
+    private var starsArray: com.google.gson.JsonArray? = null
     private val stars : ArrayList<Star> = ArrayList()
     private var settingsOpen : Boolean = false
     private val zoom = PackedFloat(1f)
     private lateinit var sensorManager: SensorManager
     private var azimuth = 0f
     private var vertAngle = 0f
+    private var watchUpsideDown = false
     private var displayedAzimuth = 0f
     private val handler = Handler(Looper.getMainLooper())
     private val updateTask = object : Runnable {
@@ -222,6 +225,12 @@ class MainActivity : ComponentActivity() {
         return json
     }
 
+    private fun parseJSONS() {
+        val starsFile = loadJSONFromAnotherFile("stars.json")
+        val jsonStars = JsonParser.parseString(starsFile).asJsonObject
+        starsArray = jsonStars.getAsJsonArray("stars")
+    }
+
     private fun calculateStars() {
         Log.d("Star", "Calculating stars $latitude $longitude")
 
@@ -231,12 +240,11 @@ class MainActivity : ComponentActivity() {
 
         val converter = Converter(latitude, longitude, zonedDateTime)
 
-        val starsFile = loadJSONFromAnotherFile("stars.json")
-        val jsonStars = JsonParser.parseString(starsFile).asJsonObject
-
-        val starsArray: com.google.gson.JsonArray? = jsonStars.getAsJsonArray("stars")
 
         stars.clear()
+
+
+
 
         starsArray?.forEach { star ->
 
@@ -246,6 +254,8 @@ class MainActivity : ComponentActivity() {
             val dec: Double = coordinates.asJsonObject.getAsJsonPrimitive("dec").asDouble
             val ra: Double = coordinates.asJsonObject.getAsJsonPrimitive("ra").asDouble
             val mag: Double = starJsonObject.getAsJsonPrimitive("vmag").asDouble
+
+            val name = starJsonObject.getAsJsonPrimitive("name").asString
 
             val equatorialCoordinates = EquatorialCoordinates(
                 rightAscension = ra,
@@ -279,16 +289,16 @@ class MainActivity : ComponentActivity() {
 
         requestLocationPermission()
 
+        parseJSONS()
+
         calculateStars()
 
         setCanvas()
     }
 
     private fun setCanvas() {
-        // Powinno być uwzględnione w wyświetlaniu.
-        val watchUpsideDown = vertAngle > PI.toFloat() - 1f
         setContent {
-            WearApp(stars, zoom, displayedAzimuth) {
+            WearApp(stars, zoom, displayedAzimuth, watchUpsideDown) {
                 settingsOpen = !settingsOpen
             }
         }
@@ -301,9 +311,17 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun orientationUpdate() {
-        if ((vertAngle < 1f || vertAngle > PI.toFloat() - 1f) && zoom.v == 1f) {
-            displayedAzimuth = blendAngles(displayedAzimuth, azimuth, 0.2f)
-            update()
+        if (zoom.v == 1f) {
+            if (vertAngle < LOCK_ANGLE) {
+                watchUpsideDown = false
+                displayedAzimuth = blendAngles(displayedAzimuth, azimuth, 0.2f)
+                update()
+            }
+            else if (vertAngle > PI.toFloat() - LOCK_ANGLE) {
+                watchUpsideDown = true
+                displayedAzimuth = blendAngles(displayedAzimuth, azimuth, 0.2f)
+                update()
+            }
         }
     }
 
@@ -379,10 +397,10 @@ class Star {
         alpha = azimuth.toFloat()
     }
 
-    fun calculat_position(user_center : Offset, zoom : Float, phi : Float): Offset {
-        val x = zoom * r * cos(alpha + phi)
+    fun calculatePosition(userCenter : Offset, zoom : Float, phi : Float, flip: Boolean): Offset {
+        val x = zoom * r * cos(alpha + phi) * if (flip) -1f else 1f
         val y = zoom * r * sin(alpha + phi)
-        return Offset(x, y) + user_center
+        return Offset(x, y) + userCenter
     }
 }
 
@@ -391,11 +409,11 @@ class PackedFloat(var v: Float) {
 
 
 @Composable
-fun WearApp(stars: ArrayList<Star>, pZoom : PackedFloat, azimuth: Float, toggleMenu: () -> Unit) {
+fun WearApp(stars: ArrayList<Star>, pZoom : PackedFloat, azimuth: Float, upsideDown: Boolean, toggleMenu: () -> Unit) {
     var brightness: Int = 0
     val watchCenter = Offset(WATCHFACE_RADIUS.toFloat(), WATCHFACE_RADIUS.toFloat())
     var positionOffset by remember {
-        mutableStateOf(Offset(WATCHFACE_RADIUS.toFloat(), WATCHFACE_RADIUS.toFloat()))
+        mutableStateOf(Offset(0f, 0f))
     }
     var zoom by remember {
         mutableFloatStateOf(pZoom.v)
@@ -412,6 +430,15 @@ fun WearApp(stars: ArrayList<Star>, pZoom : PackedFloat, azimuth: Float, toggleM
     if (zoom != pZoom.v) {
         zoom = pZoom.v
     }
+
+    val screenRadius = WATCHFACE_RADIUS / zoom
+    if (positionOffset.getDistance() + screenRadius > WATCHFACE_RADIUS) {
+        val target = WATCHFACE_RADIUS - screenRadius
+        positionOffset *= (target / positionOffset.getDistance()).toFloat()
+    }
+    val position = watchCenter + positionOffset * zoom
+
+    Log.d("Disp", "${position.x} ${position.y} $zoom")
 
     SkyMapTheme {
 
@@ -452,12 +479,7 @@ fun WearApp(stars: ArrayList<Star>, pZoom : PackedFloat, azimuth: Float, toggleM
                         .fillMaxSize()
                         .pointerInput("Drag") {
                             detectDragGestures { _, dragAmount ->
-                                var newPosition = positionOffset + dragAmount
-                                newPosition -= watchCenter
-                                if (newPosition.getDistanceSquared() <= Math.pow((zoom - 1) * WATCHFACE_RADIUS, 2.0))
-                                {
-                                    positionOffset += dragAmount
-                                }
+                                positionOffset += dragAmount / zoom
                             }
                         }
 
@@ -468,7 +490,7 @@ fun WearApp(stars: ArrayList<Star>, pZoom : PackedFloat, azimuth: Float, toggleM
                                     toggleMenu()
                                 },
                                 onDoubleTap = { offset ->
-                                    positionOffset += offset - watchCenter
+                                    positionOffset -= (offset - watchCenter) / zoom
                                     zoom++
                                     if (zoom > 5f) {
                                         zoom = 1f
@@ -506,7 +528,7 @@ fun WearApp(stars: ArrayList<Star>, pZoom : PackedFloat, azimuth: Float, toggleM
                             drawCircle(
                                 color = col,
                                 radius = size,
-                                center = s.calculat_position(positionOffset, zoom, -azimuth)
+                                center = s.calculatePosition(position, zoom, -azimuth, upsideDown)
                             )
                         }
                     }
@@ -519,7 +541,7 @@ fun WearApp(stars: ArrayList<Star>, pZoom : PackedFloat, azimuth: Float, toggleM
 @Preview(device = Devices.WEAR_OS_SMALL_ROUND, showSystemUi = true)
 @Composable
 fun DefaultPreview() {
-    WearApp(ArrayList(), PackedFloat(1f), 0f) {
+    WearApp(ArrayList(), PackedFloat(1f), 0f, false) {
 
     }
 }
