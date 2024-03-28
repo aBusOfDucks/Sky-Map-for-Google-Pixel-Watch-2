@@ -76,6 +76,8 @@ const val WATCHFACE_RADIUS = 192.0
 
 const val LOCK_ANGLE = 1f
 
+const val MAX_ZOOM = 5f
+
 class MainActivity : ComponentActivity() {
     private var starsArray: com.google.gson.JsonArray? = null
     private val stars : ArrayList<Star> = ArrayList()
@@ -329,7 +331,7 @@ class MainActivity : ComponentActivity() {
         if (event?.action == MotionEvent.ACTION_SCROLL && RotaryEncoderHelper.isFromRotaryEncoder(event)) {
             val delta = RotaryEncoderHelper.getRotaryAxisValue(event)
             zoom.v -= delta * 0.5f
-            zoom.v = max(1f, min(zoom.v, 5f))
+            zoom.v = max(1f, min(zoom.v, MAX_ZOOM))
             update()
 
             return true
@@ -398,8 +400,8 @@ class Star {
     }
 
     fun calculatePosition(userCenter : Offset, zoom : Float, phi : Float, flip: Boolean): Offset {
-        val x = zoom * r * cos(alpha + phi) * if (flip) -1f else 1f
-        val y = zoom * r * sin(alpha + phi)
+        val y = - zoom * r * cos(alpha + phi) * if (flip) -1f else 1f
+        val x = zoom * r * sin(alpha + phi)
         return Offset(x, y) + userCenter
     }
 }
@@ -492,8 +494,8 @@ fun WearApp(stars: ArrayList<Star>, pZoom : PackedFloat, azimuth: Float, upsideD
                                 onDoubleTap = { offset ->
                                     positionOffset -= (offset - watchCenter) / zoom
                                     zoom++
-                                    if (zoom > 5f) {
-                                        zoom = 1f
+                                    if (zoom > MAX_ZOOM) {
+                                        zoom = MAX_ZOOM
                                     }
                                     pZoom.v = zoom
                                 }
