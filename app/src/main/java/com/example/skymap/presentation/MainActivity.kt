@@ -400,8 +400,8 @@ class Star {
     }
 
     fun calculatePosition(userCenter : Offset, zoom : Float, phi : Float, flip: Boolean): Offset {
-        val y = - zoom * r * cos(alpha + phi) * if (flip) -1f else 1f
-        val x = zoom * r * sin(alpha + phi)
+        val y = - zoom * r * cos(alpha + phi)
+        val x = zoom * r * sin(alpha + phi) * if (flip) -1f else 1f
         return Offset(x, y) + userCenter
     }
 }
