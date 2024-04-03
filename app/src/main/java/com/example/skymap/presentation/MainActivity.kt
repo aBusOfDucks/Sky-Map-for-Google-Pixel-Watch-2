@@ -301,7 +301,7 @@ class MainActivity : ComponentActivity() {
     private fun setCanvas() {
         setContent {
             WearApp(stars, zoom, displayedAzimuth, watchUpsideDown) {
-                settingsOpen = !settingsOpen
+                settingsOpen = it
             }
         }
     }
@@ -411,7 +411,7 @@ class PackedFloat(var v: Float) {
 
 
 @Composable
-fun WearApp(stars: ArrayList<Star>, pZoom : PackedFloat, azimuth: Float, upsideDown: Boolean, toggleMenu: () -> Unit) {
+fun WearApp(stars: ArrayList<Star>, pZoom : PackedFloat, azimuth: Float, upsideDown: Boolean, toggleMenu: (Boolean) -> Unit) {
     var brightness: Int = 0
     val watchCenter = Offset(WATCHFACE_RADIUS.toFloat(), WATCHFACE_RADIUS.toFloat())
     var positionOffset by remember {
@@ -458,7 +458,7 @@ fun WearApp(stars: ArrayList<Star>, pZoom : PackedFloat, azimuth: Float, upsideD
                     {i,v -> settingsState[i] = v},
                     {
                         settingsOpen = false
-                        toggleMenu()
+                        toggleMenu(false)
                     }
                 )
             }
@@ -489,7 +489,7 @@ fun WearApp(stars: ArrayList<Star>, pZoom : PackedFloat, azimuth: Float, upsideD
                             detectTapGestures(
                                 onLongPress = {
                                     settingsOpen = true
-                                    toggleMenu()
+                                    toggleMenu(true)
                                 },
                                 onDoubleTap = { offset ->
                                     positionOffset -= (offset - watchCenter) / zoom
