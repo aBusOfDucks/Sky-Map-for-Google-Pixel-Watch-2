@@ -171,7 +171,6 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    //
     private fun requestLocationPermission() {
         if (ContextCompat.checkSelfPermission(
                 this,
@@ -382,12 +381,12 @@ fun blendAngles(a1: Float, a2: Float, weight: Float) : Float{
 
 val PROJECTION: Projection = EquidistantAzimuthalProjection()
 
-// Placeholder for prototype
 class Star {
     var position = Offset(0F, 0F)
     var size: Int = 1
     var r: Float = 0.0F
     var alpha: Float = 0.0F
+    var minimumZoom: Int = 0
 
     fun generate(mag: Double, azimuth: Double, altitude: Double) {
         //size = (1..BRIGHTNESS_MAX+1).random()
@@ -397,12 +396,35 @@ class Star {
         r = (PROJECTION.convert(altitude) * WATCHFACE_RADIUS).toFloat()
         //alpha = (Random.nextFloat() * 2.0 * Math.PI).toFloat()
         alpha = azimuth.toFloat()
+        minimumZoom = BRIGHTNESS_MAX - 1 - size
     }
 
     fun calculatePosition(userCenter : Offset, zoom : Float, phi : Float, flip: Boolean): Offset {
         val y = - zoom * r * cos(alpha + phi)
         val x = zoom * r * sin(alpha + phi) * if (flip) -1f else 1f
         return Offset(x, y) + userCenter
+    }
+
+    fun isVisiable(brightness: Int, zoom: Float): Boolean {
+        return brightness < size && minimumZoom <= zoom
+    }
+
+    fun getColor(zoom: Float, colorSetting: Int): Color {
+
+        if(!isVisiable(0, zoom))
+            return Color.Black
+
+        val starColor =
+            if (colorSetting == 0)
+                Color.White
+            else
+                Color.Red
+
+        val alpha = (zoom - minimumZoom) / (MAX_ZOOM - minimumZoom)
+
+     // Uncomment to disable star changing color from background to red / white
+     //   alpha = size.toFloat() / (BRIGHTNESS_MAX + 1).toFloat()
+        return Color(starColor.red, starColor.green, starColor.blue, alpha)
     }
 }
 
@@ -470,11 +492,6 @@ fun WearApp(stars: ArrayList<Star>, pZoom : PackedFloat, azimuth: Float, upsideD
                         Color(0f,0f,0.2f,1f)
                     else
                         Color.Black
-                val starColor =
-                    if (settingsState[INDEX_COLOR] == 0)
-                        Color.White
-                    else
-                        Color.Red
 
                 Canvas(
                     modifier = Modifier
@@ -493,10 +510,7 @@ fun WearApp(stars: ArrayList<Star>, pZoom : PackedFloat, azimuth: Float, upsideD
                                 },
                                 onDoubleTap = { offset ->
                                     positionOffset -= (offset - watchCenter) / zoom
-                                    zoom++
-                                    if (zoom > MAX_ZOOM) {
-                                        zoom = MAX_ZOOM
-                                    }
+                                    zoom = min(MAX_ZOOM, zoom + 1)
                                     pZoom.v = zoom
                                 }
                             )
@@ -505,28 +519,11 @@ fun WearApp(stars: ArrayList<Star>, pZoom : PackedFloat, azimuth: Float, upsideD
                     drawCircle(color = backgroundColor, radius = WATCHFACE_RADIUS.toFloat())
                     for(s in stars)
                     {
-                        if(s.size > brightness)
+                        if(s.isVisiable(brightness, zoom))
                         {
-                            var size = 1F
-                            var col = starColor
-                            val DISPLAY_MODE_TEST = 2
-
-                            when(DISPLAY_MODE_TEST) {
-                                0 -> {
-                                    size = s.size.toFloat()
-                                    col = starColor
-                                }
-                                1 -> {
-                                    size = s.size.toFloat()
-                                    val x = s.size.toFloat() / (BRIGHTNESS_MAX+1).toFloat()
-                                    col = Color(x * starColor.red, x * starColor.green, x * starColor.blue)
-                                }
-                                2 -> {
-                                    size = 3F
-                                    val x = s.size.toFloat() / (BRIGHTNESS_MAX+1).toFloat()
-                                    col = Color(x * starColor.red, x * starColor.green, x * starColor.blue)
-                                }
-                            }
+                            val size = 3F
+                            val x = s.size.toFloat() / (BRIGHTNESS_MAX + 1).toFloat()
+                            val col = s.getColor(zoom, settingsState[INDEX_COLOR])
                             drawCircle(
                                 color = col,
                                 radius = size,
