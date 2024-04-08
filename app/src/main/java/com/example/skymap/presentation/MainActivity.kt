@@ -503,6 +503,12 @@ class Planet(
 class PackedFloat(var v: Float) {
 }
 
+fun calculateNorthPosition(phi: Float) : Offset {
+    val r = 0.90F * WATCHFACE_RADIUS.toFloat()
+    val x = - r * cos(phi) + WATCHFACE_RADIUS
+    val y = r * sin(phi) + WATCHFACE_RADIUS
+    return Offset(x.toFloat(), y.toFloat())
+}
 
 @Composable
 fun WearApp(stars: ArrayList<Star>, planets: ArrayList<Planet>, pZoom : PackedFloat, azimuth: Float, upsideDown: Boolean, toggleMenu: (Boolean) -> Unit) {
@@ -593,6 +599,16 @@ fun WearApp(stars: ArrayList<Star>, planets: ArrayList<Planet>, pZoom : PackedFl
                         }
                 ) {
                     drawCircle(color = backgroundColor, radius = WATCHFACE_RADIUS.toFloat())
+
+                    if(zoom >= 1)
+                    {
+                        drawText(
+                            textMeasurer.measure("N"),
+                            color = Color.Red,
+                            topLeft = calculateNorthPosition(azimuth) - Offset(textMeasurer.measure("N").size.width.toFloat() * 0.5f,textMeasurer.measure("N").size.height.toFloat() * 0.5f)
+                        )
+                    }
+
                     for(s in stars)
                     {
                         if(s.isVisible(brightness, zoom))
