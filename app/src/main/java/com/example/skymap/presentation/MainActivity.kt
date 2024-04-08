@@ -13,10 +13,8 @@ import android.hardware.SensorManager
 import android.opengl.Matrix
 import Converter
 import EquatorialCoordinates
-import HorizontalCoordinates
 import android.Manifest
 import android.content.pm.PackageManager
-import android.location.Location
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -47,6 +45,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.wear.compose.material.MaterialTheme
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.text.drawText
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.core.content.ContextCompat
 import com.example.skymap.presentation.theme.SkyMapTheme
 import com.google.android.gms.location.FusedLocationProviderClient
@@ -66,11 +66,8 @@ import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.cos
 import kotlin.math.sin
-import kotlin.random.Random
 import com.google.gson.JsonParser
-import java.time.LocalTime
 import java.time.ZoneOffset
-import kotlin.math.abs
 
 const val WATCHFACE_RADIUS = 192.0
 
@@ -81,6 +78,7 @@ const val MAX_ZOOM = 5f
 class MainActivity : ComponentActivity() {
     private var starsArray: com.google.gson.JsonArray? = null
     private val stars : ArrayList<Star> = ArrayList()
+    private val planets : ArrayList<Planet> = ArrayList()
     private var settingsOpen : Boolean = false
     private val zoom = PackedFloat(1f)
     private lateinit var sensorManager: SensorManager
@@ -98,6 +96,7 @@ class MainActivity : ComponentActivity() {
     private val starTask = object : Runnable {
         override fun run() {
             calculateStars()
+            calculatePlanets()
             update()
             handler.postDelayed(this, 5000)
         }
@@ -266,11 +265,65 @@ class MainActivity : ComponentActivity() {
             val horizontalCoordinates = converter.equatorialToHorizontal(equatorialCoordinates)
 
             if (horizontalCoordinates.altitude > 0) {
-                val temp: Star = Star()
-                temp.generate(mag, horizontalCoordinates.azimuth, horizontalCoordinates.altitude)
-                stars.add(temp)
+                stars.add(Star(mag, horizontalCoordinates.azimuth, horizontalCoordinates.altitude))
             }
         }
+    }
+
+    private fun calculatePlanets() {
+        planets.clear()
+
+        planets.addAll(arrayOf(
+            Planet(
+                "Mercury",
+                Char(0x263F),
+                Color(0.5f,0.5f,0.5f,1f),
+                0.8,
+                0.5
+            ),
+            Planet(
+                "Venus",
+                Char(0x2640),
+                Color(0.5f,0.48f,0.45f,1f),
+                1.6,
+                0.5
+            ),
+            Planet(
+                "Mars",
+                Char(0x2642),
+                Color(0.55f,0.42f,0.4f,1f),
+                2.4,
+                0.5
+            ),
+            Planet(
+                "Jupiter",
+                Char(0x2643),
+                Color(0.7f,0.65f,0.6f,1f),
+                3.2,
+                0.5
+            ),
+            Planet(
+                "Saturn",
+                Char(0x2644),
+                Color(0.7f,0.7f,0.6f,1f),
+                4.0,
+                0.5
+            ),
+            Planet(
+                "Uranus",
+                Char(0x26E2),
+                Color(0.6f,0.65f,0.7f,1f),
+                4.8,
+                0.5
+            ),
+            Planet(
+                "Neptune",
+                Char(0x2646),
+                Color(0.55f,0.6f,0.75f,1f),
+                5.6,
+                0.5
+            ),
+        ))
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -299,7 +352,7 @@ class MainActivity : ComponentActivity() {
 
     private fun setCanvas() {
         setContent {
-            WearApp(stars, zoom, displayedAzimuth, watchUpsideDown) {
+            WearApp(stars, planets, zoom, displayedAzimuth, watchUpsideDown) {
                 settingsOpen = it
             }
         }
@@ -381,22 +434,12 @@ fun blendAngles(a1: Float, a2: Float, weight: Float) : Float{
 
 val PROJECTION: Projection = EquidistantAzimuthalProjection()
 
-class Star {
-    var position = Offset(0F, 0F)
-    var size: Int = 1
+open class SkyPoint(azimuth : Double, altitude : Double) {
     var r: Float = 0.0F
     var alpha: Float = 0.0F
-    var minimumZoom: Int = 0
-
-    fun generate(mag: Double, azimuth: Double, altitude: Double) {
-        //size = (1..BRIGHTNESS_MAX+1).random()
-
-        size = BRIGHTNESS_MAX - mag.toInt()
-        //r = ((WATCHFACE_RADIUS - Math.pow(WATCHFACE_RADIUS, Random.nextDouble())) * (Random.nextDouble() / 2.0 + 0.5)).toFloat()
+    init {
         r = (PROJECTION.convert(altitude) * WATCHFACE_RADIUS).toFloat()
-        //alpha = (Random.nextFloat() * 2.0 * Math.PI).toFloat()
         alpha = azimuth.toFloat()
-        minimumZoom = BRIGHTNESS_MAX - 1 - size
     }
 
     fun calculatePosition(userCenter : Offset, zoom : Float, phi : Float, flip: Boolean): Offset {
@@ -404,14 +447,26 @@ class Star {
         val x = zoom * r * sin(alpha + phi) * if (flip) -1f else 1f
         return Offset(x, y) + userCenter
     }
+}
 
-    fun isVisiable(brightness: Int, zoom: Float): Boolean {
-        return brightness < size && minimumZoom <= zoom
+class Star(mag : Double, azimuth: Double, altitude: Double) : SkyPoint(azimuth, altitude) {
+    var position = Offset(0F, 0F)
+    var size: Int = 1
+    var minimumZoom: Int = 0
+
+    init {
+        size = BRIGHTNESS_MAX - mag.toInt()
+        minimumZoom = mag.toInt() - 1
     }
 
-    fun getColor(zoom: Float, colorSetting: Int): Color {
+    fun isVisible(brightness: Int, zoom: Float): Boolean {
+        //return brightness < size && minimumZoom <= zoom
+        return true
+    }
 
-        if(!isVisiable(0, zoom))
+    fun getColor(zoom: Float, colorSetting: Int, brightnessFactor : Float): Color {
+
+        if(!isVisible(0, zoom))
             return Color.Black
 
         val starColor =
@@ -420,12 +475,29 @@ class Star {
             else
                 Color.Red
 
-        val alpha = (zoom - minimumZoom) / (MAX_ZOOM - minimumZoom)
+        val alpha = saturate((zoom + brightnessFactor - minimumZoom) / (MAX_ZOOM - minimumZoom))
 
      // Uncomment to disable star changing color from background to red / white
      //   alpha = size.toFloat() / (BRIGHTNESS_MAX + 1).toFloat()
         return Color(starColor.red, starColor.green, starColor.blue, alpha)
     }
+
+    private fun saturate(v : Float) : Float {
+        if (v < 0f)
+            return 0f
+        if (v > 1f)
+            return 1f
+        return v
+    }
+}
+
+class Planet(
+    val name : String,
+    val symbol : Char,
+    val col : Color,
+    azimuth: Double,
+    altitude: Double)
+    : SkyPoint(azimuth, altitude) {
 }
 
 class PackedFloat(var v: Float) {
@@ -433,7 +505,7 @@ class PackedFloat(var v: Float) {
 
 
 @Composable
-fun WearApp(stars: ArrayList<Star>, pZoom : PackedFloat, azimuth: Float, upsideDown: Boolean, toggleMenu: (Boolean) -> Unit) {
+fun WearApp(stars: ArrayList<Star>, planets: ArrayList<Planet>, pZoom : PackedFloat, azimuth: Float, upsideDown: Boolean, toggleMenu: (Boolean) -> Unit) {
     var brightness: Int = 0
     val watchCenter = Offset(WATCHFACE_RADIUS.toFloat(), WATCHFACE_RADIUS.toFloat())
     var positionOffset by remember {
@@ -463,6 +535,10 @@ fun WearApp(stars: ArrayList<Star>, pZoom : PackedFloat, azimuth: Float, upsideD
     val position = watchCenter + positionOffset * zoom
 
     Log.d("Disp", "${position.x} ${position.y} $zoom")
+
+    val textMeasurer = rememberTextMeasurer()
+
+    val brightnessFactor = 2f - settingsState[INDEX_BRIGHTNESS].toFloat() * 0.5f
 
     SkyMapTheme {
 
@@ -519,15 +595,36 @@ fun WearApp(stars: ArrayList<Star>, pZoom : PackedFloat, azimuth: Float, upsideD
                     drawCircle(color = backgroundColor, radius = WATCHFACE_RADIUS.toFloat())
                     for(s in stars)
                     {
-                        if(s.isVisiable(brightness, zoom))
+                        if(s.isVisible(brightness, zoom))
                         {
                             val size = 3F
                             val x = s.size.toFloat() / (BRIGHTNESS_MAX + 1).toFloat()
-                            val col = s.getColor(zoom, settingsState[INDEX_COLOR])
+                            val col = s.getColor(zoom, settingsState[INDEX_COLOR], brightnessFactor)
                             drawCircle(
                                 color = col,
                                 radius = size,
                                 center = s.calculatePosition(position, zoom, -azimuth, upsideDown)
+                            )
+                        }
+                    }
+                    if (settingsState[INDEX_PLANET] == 0)
+                    {
+                        for(p in planets)
+                        {
+                            val text : String = if (zoom > 3f) p.name else p.symbol.toString()
+                            val pos = p.calculatePosition(position, zoom, -azimuth, upsideDown)
+                            val measured = textMeasurer.measure(text)
+                            val col = if (settingsState[INDEX_COLOR] == 0) p.col else Color.Red
+
+                            drawCircle(
+                                color = col,
+                                radius = 4f,
+                                center = pos
+                            )
+                            drawText(
+                                measured,
+                                color = col,
+                                topLeft = pos + Offset(5f - measured.size.width.toFloat() * 0.5f,5f)
                             )
                         }
                     }
@@ -540,7 +637,7 @@ fun WearApp(stars: ArrayList<Star>, pZoom : PackedFloat, azimuth: Float, upsideD
 @Preview(device = Devices.WEAR_OS_SMALL_ROUND, showSystemUi = true)
 @Composable
 fun DefaultPreview() {
-    WearApp(ArrayList(), PackedFloat(1f), 0f, false) {
+    WearApp(ArrayList(), ArrayList(), PackedFloat(1f), 0f, false) {
 
     }
 }
