@@ -42,6 +42,12 @@ const val INDEX_PLANET = 1
 const val INDEX_BRIGHTNESS = 2
 const val INDEX_COLOR = 3
 
+const val SHOW = 0
+const val DO_NOT_SHOW = 1
+
+const val WHITE_MODE = 0
+const val RED_MODE = 1
+
 const val BRIGHTNESS_MAX = 6
 
 @Composable
@@ -101,8 +107,8 @@ fun Menu(menuState: Array<Int>, changeState: (Int, Int) -> Unit, menuExit: () ->
                         R.drawable.constellation_lines,
                         R.drawable.constellation_text
                     ),
-                    startState = menuState[0],
-                    onClick = { i -> changeState(0, i) },
+                    startState = menuState[INDEX_CONSTELLATION],
+                    onClick = { i -> changeState(INDEX_CONSTELLATION, i) },
                     padding = 2.5f
                 )
             }
@@ -112,8 +118,8 @@ fun Menu(menuState: Array<Int>, changeState: (Int, Int) -> Unit, menuExit: () ->
                         R.drawable.planet,
                         R.drawable.planet_no
                     ),
-                    startState = menuState[1],
-                    onClick = { i -> changeState(1, i) },
+                    startState = menuState[INDEX_PLANET],
+                    onClick = { i -> changeState(INDEX_PLANET, i) },
                     padding = 7.5f
                 )
             }
@@ -128,8 +134,8 @@ fun Menu(menuState: Array<Int>, changeState: (Int, Int) -> Unit, menuExit: () ->
                         R.drawable.brightness_5,
                         R.drawable.brightness_6,
                     ),
-                    startState = menuState[2],
-                    onClick = { i -> changeState(2, i) },
+                    startState = menuState[INDEX_BRIGHTNESS],
+                    onClick = { i -> changeState(INDEX_BRIGHTNESS, i) },
                     padding = 2.5f
                 )
             }
@@ -142,14 +148,14 @@ fun Menu(menuState: Array<Int>, changeState: (Int, Int) -> Unit, menuExit: () ->
                         .aspectRatio(1.0f)
                         .padding(all = Dp(2.5f))
                 ) {
-                    var index by remember { mutableIntStateOf(menuState[3]) }
+                    var index by remember { mutableIntStateOf(menuState[INDEX_COLOR]) }
                     Button(
                         modifier = Modifier
                             .fillMaxSize(),
                         onClick = {
                             index++
                             index %= 2
-                            changeState(3, index)
+                            changeState(INDEX_COLOR, index)
                         },
                         colors = ButtonDefaults.buttonColors(
                             backgroundColor = Color.DarkGray,

@@ -11,8 +11,6 @@ import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import android.opengl.Matrix
-import Converter
-import EquatorialCoordinates
 import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Bundle
@@ -59,26 +57,25 @@ import com.google.android.wearable.input.RotaryEncoderHelper
 import kotlin.math.PI
 import kotlin.math.acos
 import java.io.IOException
-import java.time.LocalDateTime
-import java.time.ZoneId
-import java.time.ZonedDateTime
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.cos
 import kotlin.math.sin
 import com.google.gson.JsonParser
-import java.time.ZoneOffset
 
-const val WATCHFACE_RADIUS = 192.0
+private const val WATCHFACE_RADIUS = 192.0f
 
-const val LOCK_ANGLE = 1f
+private const val LOCK_ANGLE = 1f
 
 const val MAX_ZOOM = 5f
 
+private const val STAR_DISPLAY_SIZE = 2f
+private const val PLANET_DISPLAY_SIZE = 4f
+
 class MainActivity : ComponentActivity() {
     private var starsArray: com.google.gson.JsonArray? = null
-    private val stars : ArrayList<Star> = ArrayList()
-    private val planets : ArrayList<Planet> = ArrayList()
+    private var stars : ArrayList<Star> = ArrayList()
+    private var planets : ArrayList<Planet> = ArrayList()
     private var settingsOpen : Boolean = false
     private val zoom = PackedFloat(1f)
     private lateinit var sensorManager: SensorManager
@@ -95,8 +92,8 @@ class MainActivity : ComponentActivity() {
     }
     private val starTask = object : Runnable {
         override fun run() {
-            calculateStars()
-            calculatePlanets()
+            stars = calculateStars(latitude, longitude, starsArray)
+            planets = calculatePlanets()
             update()
             handler.postDelayed(this, 5000)
         }
@@ -129,8 +126,7 @@ class MainActivity : ComponentActivity() {
         }
 
         override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {
-            // Dokładność czujnika się zmieniła
-            // Interfejs tego wymaga
+            return;
         }
 
     }
@@ -144,7 +140,7 @@ class MainActivity : ComponentActivity() {
             for (location in result.locations) {
                 latitude = location.latitude
                 longitude = location.longitude
-                calculateStars()
+                stars = calculateStars(latitude, longitude, starsArray)
                 update()
             }
         }
@@ -164,7 +160,6 @@ class MainActivity : ComponentActivity() {
                 requestLocationUpdates()
             }
             else -> {
-                // Nie mamy uprawnień
                 requestLocationPermission()
             }
         }
@@ -231,101 +226,6 @@ class MainActivity : ComponentActivity() {
         starsArray = jsonStars.getAsJsonArray("stars")
     }
 
-    private fun calculateStars() {
-        Log.d("Star", "Calculating stars $latitude $longitude")
-
-        val localDateTime = LocalDateTime.now(ZoneOffset.UTC)
-        val zoneId = ZoneId.of("GMT")
-        val zonedDateTime = ZonedDateTime.of(localDateTime, zoneId)
-
-        val converter = Converter(latitude, longitude, zonedDateTime)
-
-
-        stars.clear()
-
-
-
-
-        starsArray?.forEach { star ->
-
-            val starJsonObject = star.asJsonObject
-            //val name: String = starJsonObject.getAsJsonPrimitive("name").asString
-            val coordinates = starJsonObject.getAsJsonObject("coordinates")
-            val dec: Double = coordinates.asJsonObject.getAsJsonPrimitive("dec").asDouble
-            val ra: Double = coordinates.asJsonObject.getAsJsonPrimitive("ra").asDouble
-            val mag: Double = starJsonObject.getAsJsonPrimitive("vmag").asDouble
-
-            val name = starJsonObject.getAsJsonPrimitive("name").asString
-
-            val equatorialCoordinates = EquatorialCoordinates(
-                rightAscension = ra,
-                declination = dec
-            )
-
-            val horizontalCoordinates = converter.equatorialToHorizontal(equatorialCoordinates)
-
-            if (horizontalCoordinates.altitude > 0) {
-                stars.add(Star(mag, horizontalCoordinates.azimuth, horizontalCoordinates.altitude))
-            }
-        }
-    }
-
-    private fun calculatePlanets() {
-        planets.clear()
-
-        planets.addAll(arrayOf(
-            Planet(
-                "Mercury",
-                Char(0x263F),
-                Color(0.5f,0.5f,0.5f,1f),
-                0.8,
-                0.5
-            ),
-            Planet(
-                "Venus",
-                Char(0x2640),
-                Color(0.5f,0.48f,0.45f,1f),
-                1.6,
-                0.5
-            ),
-            Planet(
-                "Mars",
-                Char(0x2642),
-                Color(0.55f,0.42f,0.4f,1f),
-                2.4,
-                0.5
-            ),
-            Planet(
-                "Jupiter",
-                Char(0x2643),
-                Color(0.7f,0.65f,0.6f,1f),
-                3.2,
-                0.5
-            ),
-            Planet(
-                "Saturn",
-                Char(0x2644),
-                Color(0.7f,0.7f,0.6f,1f),
-                4.0,
-                0.5
-            ),
-            Planet(
-                "Uranus",
-                Char(0x26E2),
-                Color(0.6f,0.65f,0.7f,1f),
-                4.8,
-                0.5
-            ),
-            Planet(
-                "Neptune",
-                Char(0x2646),
-                Color(0.55f,0.6f,0.75f,1f),
-                5.6,
-                0.5
-            ),
-        ))
-    }
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         sensorManager = getSystemService(SENSOR_SERVICE) as SensorManager
@@ -333,11 +233,11 @@ class MainActivity : ComponentActivity() {
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
 
         val builder = com.google.android.gms.location.LocationRequest.Builder(1000)
-        // Na emulatorze działa tylko HIGH_ACCURACY
+
         builder.setPriority(Priority.PRIORITY_HIGH_ACCURACY)
-        // To znaczy że chcemy prosić o lokalizację w nieskończoność
+
         builder.setDurationMillis(Long.MAX_VALUE)
-        // Musimy się przesunąć o 1km
+
         builder.setMinUpdateDistanceMeters(1000f)
         locationRequest = builder.build()
 
@@ -345,7 +245,7 @@ class MainActivity : ComponentActivity() {
 
         parseJSONS()
 
-        calculateStars()
+        stars = calculateStars(latitude, longitude, starsArray)
 
         setCanvas()
     }
@@ -435,8 +335,8 @@ fun blendAngles(a1: Float, a2: Float, weight: Float) : Float{
 val PROJECTION: Projection = EquidistantAzimuthalProjection()
 
 open class SkyPoint(azimuth : Double, altitude : Double) {
-    var r: Float = 0.0F
-    var alpha: Float = 0.0F
+    var r: Float = 0.0f
+    private var alpha: Float = 0.0f
     init {
         r = (PROJECTION.convert(altitude) * WATCHFACE_RADIUS).toFloat()
         alpha = azimuth.toFloat()
@@ -449,71 +349,19 @@ open class SkyPoint(azimuth : Double, altitude : Double) {
     }
 }
 
-class Star(mag : Double, azimuth: Double, altitude: Double) : SkyPoint(azimuth, altitude) {
-    var position = Offset(0F, 0F)
-    var size: Int = 1
-    var minimumZoom: Int = 0
-
-    init {
-        size = BRIGHTNESS_MAX - mag.toInt()
-        minimumZoom = mag.toInt() - 1
-    }
-
-    fun isVisible(brightness: Int, zoom: Float): Boolean {
-        //return brightness < size && minimumZoom <= zoom
-        return true
-    }
-
-    fun getColor(zoom: Float, colorSetting: Int, brightnessFactor : Float): Color {
-
-        if(!isVisible(0, zoom))
-            return Color.Black
-
-        val starColor =
-            if (colorSetting == 0)
-                Color.White
-            else
-                Color.Red
-
-        val alpha = saturate((zoom + brightnessFactor - minimumZoom) / (MAX_ZOOM - minimumZoom))
-
-     // Uncomment to disable star changing color from background to red / white
-     //   alpha = size.toFloat() / (BRIGHTNESS_MAX + 1).toFloat()
-        return Color(starColor.red, starColor.green, starColor.blue, alpha)
-    }
-
-    private fun saturate(v : Float) : Float {
-        if (v < 0f)
-            return 0f
-        if (v > 1f)
-            return 1f
-        return v
-    }
-}
-
-class Planet(
-    val name : String,
-    val symbol : Char,
-    val col : Color,
-    azimuth: Double,
-    altitude: Double)
-    : SkyPoint(azimuth, altitude) {
-}
-
 class PackedFloat(var v: Float) {
 }
 
 fun calculateNorthPosition(phi: Float) : Offset {
-    val r = 0.90F * WATCHFACE_RADIUS.toFloat()
+    val r = 0.90f * WATCHFACE_RADIUS
     val x = - r * cos(phi) + WATCHFACE_RADIUS
     val y = r * sin(phi) + WATCHFACE_RADIUS
-    return Offset(x.toFloat(), y.toFloat())
+    return Offset(x, y)
 }
 
 @Composable
 fun WearApp(stars: ArrayList<Star>, planets: ArrayList<Planet>, pZoom : PackedFloat, azimuth: Float, upsideDown: Boolean, toggleMenu: (Boolean) -> Unit) {
-    var brightness: Int = 0
-    val watchCenter = Offset(WATCHFACE_RADIUS.toFloat(), WATCHFACE_RADIUS.toFloat())
+    val watchCenter = Offset(WATCHFACE_RADIUS, WATCHFACE_RADIUS)
     var positionOffset by remember {
         mutableStateOf(Offset(0f, 0f))
     }
@@ -529,14 +377,12 @@ fun WearApp(stars: ArrayList<Star>, planets: ArrayList<Planet>, pZoom : PackedFl
         mutableStateListOf(0,0,0,0)
     }
 
-    if (zoom != pZoom.v) {
-        zoom = pZoom.v
-    }
+    zoom = pZoom.v
 
     val screenRadius = WATCHFACE_RADIUS / zoom
     if (positionOffset.getDistance() + screenRadius > WATCHFACE_RADIUS) {
         val target = WATCHFACE_RADIUS - screenRadius
-        positionOffset *= (target / positionOffset.getDistance()).toFloat()
+        positionOffset *= (target / positionOffset.getDistance())
     }
     val position = watchCenter + positionOffset * zoom
 
@@ -568,12 +414,12 @@ fun WearApp(stars: ArrayList<Star>, planets: ArrayList<Planet>, pZoom : PackedFl
             }
             else
             {
-                brightness = settingsState[INDEX_BRIGHTNESS]
                 val backgroundColor =
-                    if (settingsState[INDEX_COLOR] == 0)
-                        Color(0f,0f,0.2f,1f)
-                    else
-                        Color.Black
+                    when(settingsState[INDEX_COLOR]) {
+                        WHITE_MODE -> Color(0f,0f,0.2f,1f)
+                        RED_MODE -> Color.Black
+                        else -> Color(0f,0f,0.2f,1f)
+                    }
 
                 Canvas(
                     modifier = Modifier
@@ -598,49 +444,58 @@ fun WearApp(stars: ArrayList<Star>, planets: ArrayList<Planet>, pZoom : PackedFl
                             )
                         }
                 ) {
-                    drawCircle(color = backgroundColor, radius = WATCHFACE_RADIUS.toFloat())
+                    drawCircle(color = backgroundColor, radius = WATCHFACE_RADIUS)
+
+                    // TODO:
+                    // pokazywanie północy działa tylko dla zoom = 1
+                    // a powinno tylko dla zoom > 1
 
                     if(zoom >= 1)
                     {
+                        val myTextMeasure = textMeasurer.measure("N")
+                        val myTextHeight = myTextMeasure.size.height.toFloat()
+                        val myTextWidth = myTextMeasure.size.width.toFloat()
                         drawText(
-                            textMeasurer.measure("N"),
+                            myTextMeasure,
                             color = Color.Red,
-                            topLeft = calculateNorthPosition(azimuth) - Offset(textMeasurer.measure("N").size.width.toFloat() * 0.5f,textMeasurer.measure("N").size.height.toFloat() * 0.5f)
+                            topLeft = calculateNorthPosition(azimuth) - Offset( myTextWidth * 0.5f,myTextHeight * 0.5f)
                         )
                     }
 
-                    for(s in stars)
+                    for(star in stars)
                     {
-                        if(s.isVisible(brightness, zoom))
+                        val color = star.getColor(zoom, settingsState[INDEX_COLOR], brightnessFactor)
+                        if(color.alpha > 0)
                         {
-                            val size = 3F
-                            val x = s.size.toFloat() / (BRIGHTNESS_MAX + 1).toFloat()
-                            val col = s.getColor(zoom, settingsState[INDEX_COLOR], brightnessFactor)
                             drawCircle(
-                                color = col,
-                                radius = size,
-                                center = s.calculatePosition(position, zoom, -azimuth, upsideDown)
+                                color = color,
+                                radius = STAR_DISPLAY_SIZE,
+                                center = star.calculatePosition(position, zoom, -azimuth, upsideDown)
                             )
                         }
                     }
-                    if (settingsState[INDEX_PLANET] == 0)
+                    if (settingsState[INDEX_PLANET] == SHOW)
                     {
-                        for(p in planets)
+                        for(planet in planets)
                         {
-                            val text : String = if (zoom > 3f) p.name else p.symbol.toString()
-                            val pos = p.calculatePosition(position, zoom, -azimuth, upsideDown)
+                            val text : String = if (zoom > 3f) planet.name else planet.symbol.toString()
+                            val center = planet.calculatePosition(position, zoom, -azimuth, upsideDown)
                             val measured = textMeasurer.measure(text)
-                            val col = if (settingsState[INDEX_COLOR] == 0) p.col else Color.Red
+                            val color = when(settingsState[INDEX_COLOR]) {
+                                WHITE_MODE -> planet.col
+                                RED_MODE -> Color.Red
+                                else -> planet.col
+                            }
 
                             drawCircle(
-                                color = col,
-                                radius = 4f,
-                                center = pos
+                                color = color,
+                                radius = PLANET_DISPLAY_SIZE,
+                                center = center
                             )
                             drawText(
                                 measured,
-                                color = col,
-                                topLeft = pos + Offset(5f - measured.size.width.toFloat() * 0.5f,5f)
+                                color = color,
+                                topLeft = center + Offset(5f - measured.size.width.toFloat() * 0.5f,5f)
                             )
                         }
                     }
