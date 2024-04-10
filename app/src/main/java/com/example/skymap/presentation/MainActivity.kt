@@ -79,7 +79,8 @@ class MainActivity : ComponentActivity() {
     private var settingsOpen : Boolean = false
     private val zoom = PackedFloat(1f)
     private lateinit var sensorManager: SensorManager
-    private var azimuth = 0f
+    private var mapAzimuth = 0f
+    private var realAzimuth = 0f
     private var vertAngle = 0f
     private var watchUpsideDown = false
     private var displayedAzimuth = 0f
@@ -120,7 +121,8 @@ class MainActivity : ComponentActivity() {
                     normalVector, 0
                 )
                 SensorManager.getOrientation(rotationMatrix, orientationAngles)
-                azimuth = orientationAngles[0]
+                mapAzimuth = orientationAngles[0]
+           //     realAzimuth = mapAzimuth
                 vertAngle = acos(transformedNormal[2])
             }
         }
@@ -252,7 +254,7 @@ class MainActivity : ComponentActivity() {
 
     private fun setCanvas() {
         setContent {
-            WearApp(stars, planets, zoom, displayedAzimuth, watchUpsideDown) {
+            WearApp(stars, planets, zoom, displayedAzimuth, realAzimuth, watchUpsideDown) {
                 settingsOpen = it
             }
         }
@@ -265,18 +267,18 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun orientationUpdate() {
+        realAzimuth = blendAngles(realAzimuth, mapAzimuth, 0.2f)
         if (zoom.v == 1f) {
             if (vertAngle < LOCK_ANGLE) {
                 watchUpsideDown = false
-                displayedAzimuth = blendAngles(displayedAzimuth, azimuth, 0.2f)
-                update()
+                displayedAzimuth = blendAngles(displayedAzimuth, mapAzimuth, 0.2f)
             }
             else if (vertAngle > PI.toFloat() - LOCK_ANGLE) {
                 watchUpsideDown = true
-                displayedAzimuth = blendAngles(displayedAzimuth, azimuth, 0.2f)
-                update()
+                displayedAzimuth = blendAngles(displayedAzimuth, mapAzimuth, 0.2f)
             }
         }
+        update()
     }
 
     override fun onGenericMotionEvent(event: MotionEvent?): Boolean {
@@ -285,7 +287,6 @@ class MainActivity : ComponentActivity() {
             zoom.v -= delta * 0.5f
             zoom.v = max(1f, min(zoom.v, MAX_ZOOM))
             update()
-
             return true
         }
         return super.onGenericMotionEvent(event)
@@ -360,7 +361,7 @@ fun calculateNorthPosition(phi: Float) : Offset {
 }
 
 @Composable
-fun WearApp(stars: ArrayList<Star>, planets: ArrayList<Planet>, pZoom : PackedFloat, azimuth: Float, upsideDown: Boolean, toggleMenu: (Boolean) -> Unit) {
+fun WearApp(stars: ArrayList<Star>, planets: ArrayList<Planet>, pZoom : PackedFloat, mapAzimuth: Float,  realAzimuth: Float, upsideDown: Boolean, toggleMenu: (Boolean) -> Unit) {
     val watchCenter = Offset(WATCHFACE_RADIUS, WATCHFACE_RADIUS)
     var positionOffset by remember {
         mutableStateOf(Offset(0f, 0f))
@@ -368,6 +369,7 @@ fun WearApp(stars: ArrayList<Star>, planets: ArrayList<Planet>, pZoom : PackedFl
     var zoom by remember {
         mutableFloatStateOf(pZoom.v)
     }
+    zoom = pZoom.v
 
     var settingsOpen by remember {
         mutableStateOf(false)
@@ -377,7 +379,6 @@ fun WearApp(stars: ArrayList<Star>, planets: ArrayList<Planet>, pZoom : PackedFl
         mutableStateListOf(0,0,0,0)
     }
 
-    zoom = pZoom.v
 
     val screenRadius = WATCHFACE_RADIUS / zoom
     if (positionOffset.getDistance() + screenRadius > WATCHFACE_RADIUS) {
@@ -414,13 +415,6 @@ fun WearApp(stars: ArrayList<Star>, planets: ArrayList<Planet>, pZoom : PackedFl
             }
             else
             {
-                val backgroundColor =
-                    when(settingsState[INDEX_COLOR]) {
-                        WHITE_MODE -> Color(0f,0f,0.2f,1f)
-                        RED_MODE -> Color.Black
-                        else -> Color(0f,0f,0.2f,1f)
-                    }
-
                 Canvas(
                     modifier = Modifier
                         .fillMaxSize()
@@ -444,24 +438,26 @@ fun WearApp(stars: ArrayList<Star>, planets: ArrayList<Planet>, pZoom : PackedFl
                             )
                         }
                 ) {
+                    // Background
+                    val backgroundColor =
+                        when(settingsState[INDEX_COLOR]) {
+                            WHITE_MODE -> Color(0f,0f,0.2f,1f)
+                            RED_MODE -> Color.Black
+                            else -> Color(0f,0f,0.2f,1f)
+                        }
                     drawCircle(color = backgroundColor, radius = WATCHFACE_RADIUS)
 
-                    // TODO:
-                    // pokazywanie północy działa tylko dla zoom = 1
-                    // a powinno tylko dla zoom > 1
+                    // Pointer to North
+                    val myTextMeasure = textMeasurer.measure("N")
+                    val myTextHeight = myTextMeasure.size.height.toFloat()
+                    val myTextWidth = myTextMeasure.size.width.toFloat()
+                    drawText(
+                        myTextMeasure,
+                        color = Color.Red,
+                        topLeft = calculateNorthPosition(realAzimuth) - Offset( myTextWidth * 0.5f,myTextHeight * 0.5f)
+                    )
 
-                    if(zoom >= 1)
-                    {
-                        val myTextMeasure = textMeasurer.measure("N")
-                        val myTextHeight = myTextMeasure.size.height.toFloat()
-                        val myTextWidth = myTextMeasure.size.width.toFloat()
-                        drawText(
-                            myTextMeasure,
-                            color = Color.Red,
-                            topLeft = calculateNorthPosition(azimuth) - Offset( myTextWidth * 0.5f,myTextHeight * 0.5f)
-                        )
-                    }
-
+                    // Stars
                     for(star in stars)
                     {
                         val color = star.getColor(zoom, settingsState[INDEX_COLOR], brightnessFactor)
@@ -470,16 +466,18 @@ fun WearApp(stars: ArrayList<Star>, planets: ArrayList<Planet>, pZoom : PackedFl
                             drawCircle(
                                 color = color,
                                 radius = STAR_DISPLAY_SIZE,
-                                center = star.calculatePosition(position, zoom, -azimuth, upsideDown)
+                                center = star.calculatePosition(position, zoom, -mapAzimuth, upsideDown)
                             )
                         }
                     }
+
+                    // Planets
                     if (settingsState[INDEX_PLANET] == SHOW)
                     {
                         for(planet in planets)
                         {
                             val text : String = if (zoom > 3f) planet.name else planet.symbol.toString()
-                            val center = planet.calculatePosition(position, zoom, -azimuth, upsideDown)
+                            val center = planet.calculatePosition(position, zoom, -mapAzimuth, upsideDown)
                             val measured = textMeasurer.measure(text)
                             val color = when(settingsState[INDEX_COLOR]) {
                                 WHITE_MODE -> planet.col
@@ -508,7 +506,7 @@ fun WearApp(stars: ArrayList<Star>, planets: ArrayList<Planet>, pZoom : PackedFl
 @Preview(device = Devices.WEAR_OS_SMALL_ROUND, showSystemUi = true)
 @Composable
 fun DefaultPreview() {
-    WearApp(ArrayList(), ArrayList(), PackedFloat(1f), 0f, false) {
+    WearApp(ArrayList(), ArrayList(), PackedFloat(1f), 0f, 0f, false) {
 
     }
 }
