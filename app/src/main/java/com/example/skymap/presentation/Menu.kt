@@ -52,6 +52,9 @@ const val BRIGHTNESS_MAX = 6
 
 @Composable
 fun Menu(menuState: Array<Int>, changeState: (Int, Int) -> Unit, menuExit: () -> Unit) {
+
+    // https://developer.android.com/reference/android/util/DisplayMetrics
+    // A way to get the display height
     val context = LocalContext.current
     val displayMetrics = context.resources.displayMetrics
     val height = displayMetrics.heightPixels
@@ -64,8 +67,8 @@ fun Menu(menuState: Array<Int>, changeState: (Int, Int) -> Unit, menuExit: () ->
         .fillMaxSize()
         .draggable(
             state = rememberDraggableState(onDelta = { d ->
-                // Niestety jeżeli chcemy animacje to nie ma po prostu
-                // funkcji set value
+                // Unfortunately, there is no set value for animatable values
+                // We need to snap to them
                 coroutineScope.launch {
                     offsetY.snapTo(offsetY.value + d)
                 }
@@ -75,9 +78,8 @@ fun Menu(menuState: Array<Int>, changeState: (Int, Int) -> Unit, menuExit: () ->
             }),
             orientation = Orientation.Vertical,
             onDragStopped = { _ ->
-                // Jeżeli użytkownik przestanie przesuwać menu,
-                // to robimy animację elementu z powrotem do
-                // punktu startowego
+                // If a user stops dragging, we animate the
+                // box back to the starting position
                 this.launch {
                     offsetY.animateTo(
                         targetValue = 0f,

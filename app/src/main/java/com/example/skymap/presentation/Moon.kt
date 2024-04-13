@@ -4,22 +4,23 @@ import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.cos
 
+private const val EPS = 1e-4
+
 // Note: phase should be in (-PI, PI].
 // phase == 0 means new moon
 // phase increases over time
-// When angle == 0, the waxing crescent points to the right on the sky
-// When angle == PI/2, the waxing crescent points up on the sky
+// When angle == 0, the waxing crescent points to the east (on the skymap)
+// When angle == PI/2, the waxing crescent points to the south (on the skymap)
 class Moon(
     val phase : Float,
     val angle : Float,
     azimuth : Double,
     altitude : Double
 ) : SkyPoint(azimuth,altitude) {
-    val EPS = 1e-4
 
-    // Node: "left" means left means left from the perspective of the northern hemisphere
+    // Note: "left" means left means left from the perspective of the northern hemisphere
 
-    // Where on the moon face is the sunrise on the moon, the "leftmost" lit part
+    /** Where on the moon face is the sunrise on the moon, the "leftmost" lit part */
     fun getWaxPoint() : Float {
         if (abs(phase) < EPS) {
             // The moon is new
@@ -33,7 +34,7 @@ class Moon(
         return cos(phase)
     }
 
-    // Where on the moon face is the sunset on the moon, the "rightmost" lit part
+    /** Where on the moon face is the sunset on the moon, the "rightmost" lit part */
     fun getWanePoint() : Float {
         if (abs(phase) < EPS || abs(phase) > PI.toFloat() - EPS || phase >= 0f) {
             // The moon is new, full or waxing
@@ -46,5 +47,5 @@ class Moon(
 
 fun calculateMoon() : Moon {
     //TODO: Add moon calculation here
-    return Moon(0.8f, 0f, 0.0, 0.5)
+    return Moon(PI.toFloat() / 4, 0f, 0.0, 0.5)
 }

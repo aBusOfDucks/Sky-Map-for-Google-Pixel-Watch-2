@@ -16,37 +16,11 @@ import android.content.pm.PackageManager
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
-import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
 import android.view.MotionEvent
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.ui.graphics.Color
-import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.gestures.detectDragGestures
-import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.ui.tooling.preview.Devices
-import androidx.compose.ui.tooling.preview.Preview
-import androidx.wear.compose.material.MaterialTheme
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.text.drawText
-import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.core.content.ContextCompat
-import com.example.skymap.presentation.theme.SkyMapTheme
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationCallback
 import com.google.android.gms.location.LocationRequest
@@ -59,47 +33,73 @@ import kotlin.math.acos
 import java.io.IOException
 import kotlin.math.max
 import kotlin.math.min
-import kotlin.math.cos
-import kotlin.math.sin
 import com.google.gson.JsonParser
 
 private const val LOCK_ANGLE = 1f
 
 const val MAX_ZOOM = 5f
 
-
+const val AZIMUTH_INERTIA = 0.2f
 
 class MainActivity : ComponentActivity() {
+    // Astronomical objects:
+
+    /** Array with stars as parsed JSON objects */
     private var starsArray: com.google.gson.JsonArray? = null
+    /** Array with stars with converted coordinates */
     private var stars : ArrayList<Star> = ArrayList()
+    /** Array with planets with converted coordinates */
     private var planets : ArrayList<Planet> = ArrayList()
+    /** The moon with converted coordinates */
     private var moon : Moon = Moon(0f, 0f, 0.0, 0.0)
+
+    // Parameters for display:
+
     private var settingsOpen : Boolean = false
     private val zoom = PackedFloat(1f)
-    private lateinit var sensorManager: SensorManager
-    private var mapAzimuth = 0f
-    private var realAzimuth = 0f
+    /** The true azimuth of the watch, from the latest orientation update */
+    private var trueAzimuth = 0f
+    /** The azimuth of the watch, animated with some inertia so that
+     *  it changes in a smooth fation */
+    private var smoothAzimuth = 0f
+    /** This is the angle that the sky map is rotated by.
+     *  Changes smoothly, but also freezes if the watch is too vertical,
+     *  or the map is zoomed in */
+    private var skyAzimuth = 0f
+    /** Angle between the normal vector of the screen and the vertical axis */
     private var vertAngle = 0f
     private var watchUpsideDown = false
-    private var displayedAzimuth = 0f
+
+
+    // Tasks:
+
+    /** Handles executing tasks periodically */
     private val handler = Handler(Looper.getMainLooper())
-    private val updateTask = object : Runnable {
+    /** A quick task that runs 25 times a second */
+    private val quickTask = object : Runnable {
         override fun run() {
             orientationUpdate()
             handler.postDelayed(this, 40)
         }
     }
-    private val starTask = object : Runnable {
+    /** A more expensive task that needs to run every few seconds */
+    private val longTask = object : Runnable {
         override fun run() {
-            stars = calculateStars(latitude, longitude, starsArray)
-            planets = calculatePlanets()
-            moon = calculateMoon()
+            calculateObjects()
             update()
             handler.postDelayed(this, 5000)
         }
     }
 
+    // Orientation:
+
+    /** Needed for getting orientation */
+    private lateinit var sensorManager: SensorManager
+
+    /** Listens for orientation updates */
     private val sensorListener : SensorEventListener = object : SensorEventListener {
+        // Better to create all needed arrays once
+
         private val rotationVector = FloatArray(4)
         private val rotationMatrix = FloatArray(16)
         private val normalVector = FloatArray(4)
@@ -120,28 +120,37 @@ class MainActivity : ComponentActivity() {
                     normalVector, 0
                 )
                 SensorManager.getOrientation(rotationMatrix, orientationAngles)
-                mapAzimuth = orientationAngles[0]
-           //     realAzimuth = mapAzimuth
+                trueAzimuth = orientationAngles[0]
                 vertAngle = acos(transformedNormal[2])
             }
         }
 
         override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {
-            return;
+            // We don't have any functionality when accuracy of the sensor changes
+            // The interface requires this function to be implemented
+            return
         }
 
     }
 
-    // Lokalizacja
-    // Daje lokalizację z różnych źródeł
+    // Location:
+
+    /** Can get location from multiple sources */
     private lateinit var fusedLocationClient: FusedLocationProviderClient
     private lateinit var locationRequest: LocationRequest
+    /** Handles location updates */
     private val locationCallback = object : LocationCallback() {
         override fun onLocationResult(result: LocationResult) {
-            for (location in result.locations) {
+            // We may receive location updates in batches
+            // we only care for the newest one,
+            // the locations are ordered oldest to newest
+            if (result.locations.isNotEmpty()) {
+                val location = result.locations.last()
                 latitude = location.latitude
                 longitude = location.longitude
-                stars = calculateStars(latitude, longitude, starsArray)
+                // We want to update immediately, because
+                // the next long task might be in 5 seconds
+                calculateObjects()
                 update()
             }
         }
@@ -161,12 +170,20 @@ class MainActivity : ComponentActivity() {
                 requestLocationUpdates()
             }
             else -> {
+                // We do not have permissions
+                // Let's try to ask for them again
+                // This is not a very clean solution,
+                // but the application will not work without
+                // location updates
                 requestLocationPermission()
             }
         }
     }
 
+    // Methods:
+
     private fun requestLocationPermission() {
+        // If we already have some permissions, we do not need to ask for them
         if (ContextCompat.checkSelfPermission(
                 this,
                 Manifest.permission.ACCESS_COARSE_LOCATION
@@ -208,7 +225,7 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    // Funkcja, która wczytuje plik JSON i zwraca JSON jako String
+    /** Reads a JSON file's contents and returns them as a String */
     private fun loadJSONFromAnotherFile(fileName: String): String? {
         var json: String? = null
         try {
@@ -233,17 +250,14 @@ class MainActivity : ComponentActivity() {
 
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
 
-        val builder = com.google.android.gms.location.LocationRequest.Builder(1000)
-
+        val builder = LocationRequest.Builder(1000)
         builder.setPriority(Priority.PRIORITY_HIGH_ACCURACY)
-
         builder.setDurationMillis(Long.MAX_VALUE)
-
+        // We only want to receive an update if we have moved over 1km away from our previous location
         builder.setMinUpdateDistanceMeters(1000f)
         locationRequest = builder.build()
 
         requestLocationPermission()
-
         parseJSONS()
 
         stars = calculateStars(latitude, longitude, starsArray)
@@ -251,35 +265,43 @@ class MainActivity : ComponentActivity() {
         setCanvas()
     }
 
+    private fun calculateObjects() {
+        stars = calculateStars(latitude, longitude, starsArray)
+        planets = calculatePlanets()
+        moon = calculateMoon()
+    }
+
     private fun setCanvas() {
         setContent {
-            WearApp(stars, planets, moon, zoom, displayedAzimuth, realAzimuth, watchUpsideDown) {
+            WearApp(stars, planets, moon, zoom, skyAzimuth, smoothAzimuth, watchUpsideDown) {
                 settingsOpen = it
             }
         }
     }
 
     private fun update() {
+        // No need in updating the screen if the menu is open
         if (!settingsOpen) {
             setCanvas()
         }
     }
 
     private fun orientationUpdate() {
-        realAzimuth = blendAngles(realAzimuth, mapAzimuth, 0.2f)
+        smoothAzimuth = blendAngles(smoothAzimuth, trueAzimuth, AZIMUTH_INERTIA)
         if (zoom.v == 1f) {
             if (vertAngle < LOCK_ANGLE) {
                 watchUpsideDown = false
-                displayedAzimuth = blendAngles(displayedAzimuth, mapAzimuth, 0.2f)
+                skyAzimuth = blendAngles(skyAzimuth, trueAzimuth, AZIMUTH_INERTIA)
             }
             else if (vertAngle > PI.toFloat() - LOCK_ANGLE) {
                 watchUpsideDown = true
-                displayedAzimuth = blendAngles(displayedAzimuth, mapAzimuth, 0.2f)
+                skyAzimuth = blendAngles(skyAzimuth, trueAzimuth, AZIMUTH_INERTIA)
             }
         }
         update()
     }
 
+    /** Handles rotary input */
     override fun onGenericMotionEvent(event: MotionEvent?): Boolean {
         if (event?.action == MotionEvent.ACTION_SCROLL && RotaryEncoderHelper.isFromRotaryEncoder(event)) {
             val delta = RotaryEncoderHelper.getRotaryAxisValue(event)
@@ -301,21 +323,25 @@ class MainActivity : ComponentActivity() {
                 SensorManager.SENSOR_DELAY_UI
             )
         }
-        handler.post(updateTask)
-        handler.post(starTask)
+        // We want to have an update immediately after resuming,
+        // that is why post and not postDelayed is used here
+        handler.post(quickTask)
+        handler.post(longTask)
         requestLocationUpdates()
         super.onResume()
     }
 
     override fun onPause() {
+        // Cancel updating anything
         sensorManager.unregisterListener(sensorListener)
-        handler.removeCallbacks(updateTask)
-        handler.removeCallbacks(starTask)
+        handler.removeCallbacks(quickTask)
+        handler.removeCallbacks(longTask)
         fusedLocationClient.removeLocationUpdates(locationCallback)
         super.onPause()
     }
 }
 
+/** Shifts angle by multiple of 2PI so that it is within (-PI, PI] */
 fun shiftAngle(a: Float) : Float {
     var res = a
     while (res > PI.toFloat()) {

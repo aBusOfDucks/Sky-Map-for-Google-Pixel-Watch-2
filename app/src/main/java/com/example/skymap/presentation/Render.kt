@@ -48,6 +48,9 @@ private const val WATCHFACE_RADIUS = 192.0f
 
 private const val MOON_RADIUS = 20f
 
+// The minimal zoom at which full names of objects are displayed
+private const val NAME_CUTOFF_ZOOM = 3.0f
+
 open class SkyPoint(azimuth : Double, altitude : Double) {
     var r: Float = 0.0f
     private var alpha: Float = 0.0f
@@ -57,6 +60,14 @@ open class SkyPoint(azimuth : Double, altitude : Double) {
     }
 
     fun calculatePosition(userCenter : Offset, zoom : Float, phi : Float, flip: Boolean): Offset {
+        // Normally, the equation of converting angle and radius to x and y is
+        // given by x = r * cos(alpha), y = r * sin(alpha)
+        // However:
+        // 1. When azimuth == 0, the top of the screen points north
+        //    thus, angle equal to 0 should be the top of the screen
+        // 2. Azimuth increases clockwise when the device is right side up and anticlockwise when
+        //    it is upside down
+        // 3. The y axis goes down on the screen, higher y value mean lower on the screen
         val y = - zoom * r * cos(alpha + phi)
         val x = zoom * r * sin(alpha + phi) * if (flip) -1f else 1f
         return Offset(x, y) + userCenter
@@ -67,6 +78,14 @@ class PackedFloat(var v: Float) {
 }
 
 fun calculateNorthPosition(phi: Float, upsideDown: Boolean) : Offset {
+    // Normally, the equation of converting angle and radius to x and y is
+    // given by x = r * cos(alpha), y = r * sin(alpha)
+    // However:
+    // 1. When azimuth == 0, the top of the screen points north
+    //    thus, angle equal to 0 must mean the top of the screen (hence cos when calculating y)
+    // 2. Azimuth increases clockwise when the device is right side up and anticlockwise when
+    //    it is upside down
+    // 3. The y axis goes down on the screen, higher y value mean lower on the screen
     val flip = if(upsideDown) 1f else -1f
     val r = 0.90f * WATCHFACE_RADIUS
     val x = flip * r * sin(phi) + WATCHFACE_RADIUS
@@ -103,6 +122,7 @@ fun WearApp(
 
 
     val screenRadius = WATCHFACE_RADIUS / zoom
+    // Detects whether the user tried to drag past the map
     if (positionOffset.getDistance() + screenRadius > WATCHFACE_RADIUS) {
         val target = WATCHFACE_RADIUS - screenRadius
         positionOffset *= (target / positionOffset.getDistance())
@@ -182,7 +202,10 @@ fun WearApp(
                         topLeft = calculateNorthPosition(realAzimuth, upsideDown) - Offset( myTextWidth * 0.5f,myTextHeight * 0.5f)
                     )
 
+                    // Stars
                     drawStars(stars, zoom, settingsState, brightnessFactor, position, mapAzimuth, upsideDown)
+
+                    // Currently, the moon and the planets are both under the same setting
                     if (settingsState[INDEX_PLANET] == SHOW) {
                         drawPlanets(planets, settingsState, zoom, position, mapAzimuth, upsideDown, textMeasurer)
                         drawMoon(moon, backgroundColor, lightColor, zoom, position, mapAzimuth, upsideDown)
@@ -226,7 +249,7 @@ fun DrawScope.drawPlanets(
 ) {
     for(planet in planets)
     {
-        val text : String = if (zoom > 3f) planet.name else planet.symbol.toString()
+        val text : String = if (zoom > NAME_CUTOFF_ZOOM) planet.name else planet.symbol.toString()
         val center = planet.calculatePosition(position, zoom, -mapAzimuth, upsideDown)
         val measured = textMeasurer.measure(text)
         val color = when(settingsState[INDEX_COLOR]) {
@@ -258,16 +281,17 @@ fun DrawScope.drawMoon(
     upsideDown: Boolean) {
     val pos = moon.calculatePosition(position, zoom, -mapAzimuth, upsideDown)
     val rotateAngle = moon.angle - mapAzimuth
+    // It is easier to transform a set path than to include angles and offsets in the path building
     withTransform({
         scale(if (upsideDown) -1f else 1f, 1f, pos)
         rotateRad(rotateAngle, pos)
         translate(pos.x, pos.y)
     }) {
-        drawMoonPhase(moon,darkColor, lightColor)
+        drawMoonFace(moon,darkColor, lightColor)
     }
 }
 
-fun DrawScope.drawMoonPhase(moon: Moon, darkColor: Color, lightColor : Color) {
+fun DrawScope.drawMoonFace(moon: Moon, darkColor: Color, lightColor : Color) {
     drawCircle(
         color = darkColor,
         radius = MOON_RADIUS,
@@ -286,12 +310,14 @@ fun DrawScope.drawMoonPhase(moon: Moon, darkColor: Color, lightColor : Color) {
 }
 
 fun Path.addMoonArc(arcApexX : Float, dir : Float) {
+    // In case drawing an oval of width close to 0 causes errors
     if (abs(arcApexX) < 1e-3) {
-        lineTo(0f, MOON_RADIUS * dir)
+        lineTo(0f, -MOON_RADIUS * dir)
         return
     }
     var offset = 0f
     if (arcApexX < 0f) {
+        // If the arc apex is to negative, the arc needs to go the other way
         offset = PI.toFloat()
     }
     val angle = PI.toFloat() * 0.5f

@@ -32,6 +32,7 @@ class Star(mag : Double, azimuth: Double, altitude: Double) : SkyPoint(azimuth, 
         return starColor.copy(alpha = alpha)
     }
 
+    /** Makes sure a value doesn't go below 0 or above 1 */
     private fun saturate(v : Float) : Float {
         if (v < 0f)
             return 0f
@@ -55,7 +56,6 @@ fun calculateStars(latitude: Double, longitude: Double, starsArray: com.google.g
         val dec: Double = coordinates.asJsonObject.getAsJsonPrimitive("dec").asDouble
         val ra: Double = coordinates.asJsonObject.getAsJsonPrimitive("ra").asDouble
         val mag: Double = starJsonObject.getAsJsonPrimitive("vmag").asDouble
-        //     val name = starJsonObject.getAsJsonPrimitive("name").asString
 
         val equatorialCoordinates = EquatorialCoordinates(
             rightAscension = ra,
