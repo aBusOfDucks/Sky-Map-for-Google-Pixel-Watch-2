@@ -66,10 +66,11 @@ open class SkyPoint(azimuth : Double, altitude : Double) {
 class PackedFloat(var v: Float) {
 }
 
-fun calculateNorthPosition(phi: Float) : Offset {
+fun calculateNorthPosition(phi: Float, upsideDown: Boolean) : Offset {
+    val flip = if(upsideDown) 1f else -1f
     val r = 0.90f * WATCHFACE_RADIUS
-    val x = - r * cos(phi) + WATCHFACE_RADIUS
-    val y = r * sin(phi) + WATCHFACE_RADIUS
+    val x = flip * r * sin(phi) + WATCHFACE_RADIUS
+    val y = - r * cos(phi) + WATCHFACE_RADIUS
     return Offset(x, y)
 }
 
@@ -178,7 +179,7 @@ fun WearApp(
                     drawText(
                         myTextMeasure,
                         color = Color.Red,
-                        topLeft = calculateNorthPosition(realAzimuth) - Offset( myTextWidth * 0.5f,myTextHeight * 0.5f)
+                        topLeft = calculateNorthPosition(realAzimuth, upsideDown) - Offset( myTextWidth * 0.5f,myTextHeight * 0.5f)
                     )
 
                     drawStars(stars, zoom, settingsState, brightnessFactor, position, mapAzimuth, upsideDown)
