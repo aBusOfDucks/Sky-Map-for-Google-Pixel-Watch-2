@@ -3,6 +3,7 @@ package com.example.skymap.presentation
 import androidx.compose.ui.graphics.Color
 
 fun calculatePlanets() : ArrayList<Planet>{
+    //TODO: Add planet calculation here
     val planets : ArrayList<Planet> = ArrayList()
     planets.addAll(arrayOf(
         Planet(

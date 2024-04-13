@@ -63,19 +63,17 @@ import kotlin.math.cos
 import kotlin.math.sin
 import com.google.gson.JsonParser
 
-private const val WATCHFACE_RADIUS = 192.0f
-
 private const val LOCK_ANGLE = 1f
 
 const val MAX_ZOOM = 5f
 
-private const val STAR_DISPLAY_SIZE = 2f
-private const val PLANET_DISPLAY_SIZE = 4f
+
 
 class MainActivity : ComponentActivity() {
     private var starsArray: com.google.gson.JsonArray? = null
     private var stars : ArrayList<Star> = ArrayList()
     private var planets : ArrayList<Planet> = ArrayList()
+    private var moon : Moon = Moon(0f, 0f, 0.0, 0.0)
     private var settingsOpen : Boolean = false
     private val zoom = PackedFloat(1f)
     private lateinit var sensorManager: SensorManager
@@ -95,6 +93,7 @@ class MainActivity : ComponentActivity() {
         override fun run() {
             stars = calculateStars(latitude, longitude, starsArray)
             planets = calculatePlanets()
+            moon = calculateMoon()
             update()
             handler.postDelayed(this, 5000)
         }
@@ -254,7 +253,7 @@ class MainActivity : ComponentActivity() {
 
     private fun setCanvas() {
         setContent {
-            WearApp(stars, planets, zoom, displayedAzimuth, realAzimuth, watchUpsideDown) {
+            WearApp(stars, planets, moon, zoom, displayedAzimuth, realAzimuth, watchUpsideDown) {
                 settingsOpen = it
             }
         }
@@ -333,180 +332,3 @@ fun blendAngles(a1: Float, a2: Float, weight: Float) : Float{
     return shiftAngle(a1 + weight * diff)
 }
 
-val PROJECTION: Projection = EquidistantAzimuthalProjection()
-
-open class SkyPoint(azimuth : Double, altitude : Double) {
-    var r: Float = 0.0f
-    private var alpha: Float = 0.0f
-    init {
-        r = (PROJECTION.convert(altitude) * WATCHFACE_RADIUS).toFloat()
-        alpha = azimuth.toFloat()
-    }
-
-    fun calculatePosition(userCenter : Offset, zoom : Float, phi : Float, flip: Boolean): Offset {
-        val y = - zoom * r * cos(alpha + phi)
-        val x = zoom * r * sin(alpha + phi) * if (flip) -1f else 1f
-        return Offset(x, y) + userCenter
-    }
-}
-
-class PackedFloat(var v: Float) {
-}
-
-fun calculateNorthPosition(phi: Float) : Offset {
-    val r = 0.90f * WATCHFACE_RADIUS
-    val x = - r * cos(phi) + WATCHFACE_RADIUS
-    val y = r * sin(phi) + WATCHFACE_RADIUS
-    return Offset(x, y)
-}
-
-@Composable
-fun WearApp(stars: ArrayList<Star>, planets: ArrayList<Planet>, pZoom : PackedFloat, mapAzimuth: Float,  realAzimuth: Float, upsideDown: Boolean, toggleMenu: (Boolean) -> Unit) {
-    val watchCenter = Offset(WATCHFACE_RADIUS, WATCHFACE_RADIUS)
-    var positionOffset by remember {
-        mutableStateOf(Offset(0f, 0f))
-    }
-    var zoom by remember {
-        mutableFloatStateOf(pZoom.v)
-    }
-    zoom = pZoom.v
-
-    var settingsOpen by remember {
-        mutableStateOf(false)
-    }
-
-    val settingsState = remember {
-        mutableStateListOf(0,0,0,0)
-    }
-
-
-    val screenRadius = WATCHFACE_RADIUS / zoom
-    if (positionOffset.getDistance() + screenRadius > WATCHFACE_RADIUS) {
-        val target = WATCHFACE_RADIUS - screenRadius
-        positionOffset *= (target / positionOffset.getDistance())
-    }
-    val position = watchCenter + positionOffset * zoom
-
-    Log.d("Disp", "${position.x} ${position.y} $zoom")
-
-    val textMeasurer = rememberTextMeasurer()
-
-    val brightnessFactor = 2f - settingsState[INDEX_BRIGHTNESS].toFloat() * 0.5f
-
-    SkyMapTheme {
-
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(MaterialTheme.colors.background),
-            verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            if(settingsOpen)
-            {
-                Menu(
-                    settingsState.toTypedArray(),
-                    {i,v -> settingsState[i] = v},
-                    {
-                        settingsOpen = false
-                        toggleMenu(false)
-                    }
-                )
-            }
-            else
-            {
-                Canvas(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .pointerInput("Drag") {
-                            detectDragGestures { _, dragAmount ->
-                                positionOffset += dragAmount / zoom
-                            }
-                        }
-
-                        .pointerInput("Tap") {
-                            detectTapGestures(
-                                onLongPress = {
-                                    settingsOpen = true
-                                    toggleMenu(true)
-                                },
-                                onDoubleTap = { offset ->
-                                    positionOffset -= (offset - watchCenter) / zoom
-                                    zoom = min(MAX_ZOOM, zoom + 1)
-                                    pZoom.v = zoom
-                                }
-                            )
-                        }
-                ) {
-                    // Background
-                    val backgroundColor =
-                        when(settingsState[INDEX_COLOR]) {
-                            WHITE_MODE -> Color(0f,0f,0.2f,1f)
-                            RED_MODE -> Color.Black
-                            else -> Color(0f,0f,0.2f,1f)
-                        }
-                    drawCircle(color = backgroundColor, radius = WATCHFACE_RADIUS)
-
-                    // Pointer to North
-                    val myTextMeasure = textMeasurer.measure("N")
-                    val myTextHeight = myTextMeasure.size.height.toFloat()
-                    val myTextWidth = myTextMeasure.size.width.toFloat()
-                    drawText(
-                        myTextMeasure,
-                        color = Color.Red,
-                        topLeft = calculateNorthPosition(realAzimuth) - Offset( myTextWidth * 0.5f,myTextHeight * 0.5f)
-                    )
-
-                    // Stars
-                    for(star in stars)
-                    {
-                        val color = star.getColor(zoom, settingsState[INDEX_COLOR], brightnessFactor)
-                        if(color.alpha > 0)
-                        {
-                            drawCircle(
-                                color = color,
-                                radius = STAR_DISPLAY_SIZE,
-                                center = star.calculatePosition(position, zoom, -mapAzimuth, upsideDown)
-                            )
-                        }
-                    }
-
-                    // Planets
-                    if (settingsState[INDEX_PLANET] == SHOW)
-                    {
-                        for(planet in planets)
-                        {
-                            val text : String = if (zoom > 3f) planet.name else planet.symbol.toString()
-                            val center = planet.calculatePosition(position, zoom, -mapAzimuth, upsideDown)
-                            val measured = textMeasurer.measure(text)
-                            val color = when(settingsState[INDEX_COLOR]) {
-                                WHITE_MODE -> planet.col
-                                RED_MODE -> Color.Red
-                                else -> planet.col
-                            }
-
-                            drawCircle(
-                                color = color,
-                                radius = PLANET_DISPLAY_SIZE,
-                                center = center
-                            )
-                            drawText(
-                                measured,
-                                color = color,
-                                topLeft = center + Offset(5f - measured.size.width.toFloat() * 0.5f,5f)
-                            )
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Preview(device = Devices.WEAR_OS_SMALL_ROUND, showSystemUi = true)
-@Composable
-fun DefaultPreview() {
-    WearApp(ArrayList(), ArrayList(), PackedFloat(1f), 0f, 0f, false) {
-
-    }
-}
