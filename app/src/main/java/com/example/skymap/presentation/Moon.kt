@@ -1,13 +1,16 @@
 package com.example.skymap.presentation
 
+import androidx.compose.ui.graphics.Color
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.cos
 
 private const val EPS = 1e-4
 
+val MOON_DARK_COLOR = Color(40, 40, 40)
+
 // Note: phase should be in (-PI, PI].
-// phase == 0 means new moon
+// phase == 0 means new Moon
 // phase increases over time
 // When angle == 0, the waxing crescent points to the east (on the skymap)
 // When angle == PI/2, the waxing crescent points to the south (on the skymap)
@@ -18,34 +21,34 @@ class Moon(
     altitude : Double
 ) : SkyPoint(azimuth,altitude) {
 
-    // Note: "left" means left means left from the perspective of the northern hemisphere
+    // Note: "left" means left from the perspective of the northern hemisphere
 
     /** Where on the moon face is the sunrise on the moon, the "leftmost" lit part */
     fun getWaxPoint() : Float {
         if (abs(phase) < EPS) {
-            // The moon is new
+            // The Moon is new
             return 1f
         }
         if (abs(phase) > PI.toFloat() - EPS || phase < 0f) {
-            // The moon is full or waning
+            // The Moon is full or waning
             return -1f
         }
-        // The moon is waxing
+        // The Moon is waxing
         return cos(phase)
     }
 
-    /** Where on the moon face is the sunset on the moon, the "rightmost" lit part */
+    /** Where on the Moon face is the sunset on the Moon, the "rightmost" lit part */
     fun getWanePoint() : Float {
         if (abs(phase) < EPS || abs(phase) > PI.toFloat() - EPS || phase >= 0f) {
-            // The moon is new, full or waxing
+            // The Moon is new, full or waxing
             return 1f
         }
-        // The moon is waning
+        // The Moon is waning
         return -cos(phase)
     }
 }
 
 fun calculateMoon() : Moon {
-    //TODO: Add moon calculation here
+    //TODO: Add Moon calculation here
     return Moon(PI.toFloat() / 4, 0f, 0.0, 0.5)
 }

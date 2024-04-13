@@ -62,7 +62,7 @@ fun calculatePlanets() : ArrayList<Planet>{
 class Planet(
     val name : String,
     val symbol : Char,
-    val col : Color,
+    override val color : Color,
     azimuth: Double,
     altitude: Double)
     : SkyPoint(azimuth, altitude) {

@@ -42,11 +42,14 @@ import kotlin.math.sin
 
 private val PROJECTION: Projection = EquidistantAzimuthalProjection()
 
-private const val STAR_DISPLAY_SIZE = 2f
-private const val PLANET_DISPLAY_SIZE = 4f
 private const val WATCHFACE_RADIUS = 192.0f
 
+private const val STAR_RADIUS = 2f
+private const val PLANET_RADIUS = 4f
+
+// The Sun and the Moon are about the same size in the sky
 private const val MOON_RADIUS = 20f
+private const val SUN_RADIUS = 20f
 
 // The minimal zoom at which full names of objects are displayed
 private const val NAME_CUTOFF_ZOOM = 3.0f
@@ -54,6 +57,8 @@ private const val NAME_CUTOFF_ZOOM = 3.0f
 open class SkyPoint(azimuth : Double, altitude : Double) {
     var r: Float = 0.0f
     private var alpha: Float = 0.0f
+    open val color : Color = Color.White
+    open val colorRedMode: Color = Color.Red
     init {
         r = (PROJECTION.convert(altitude) * WATCHFACE_RADIUS).toFloat()
         alpha = azimuth.toFloat()
@@ -98,6 +103,7 @@ fun WearApp(
     stars: ArrayList<Star>,
     planets: ArrayList<Planet>,
     moon : Moon,
+    sun: Sun,
     pZoom : PackedFloat,
     mapAzimuth: Float,
     realAzimuth: Float,
@@ -192,6 +198,17 @@ fun WearApp(
                             else -> Color.White
                         }
                     drawCircle(color = backgroundColor, radius = WATCHFACE_RADIUS)
+
+                    // Stars
+                    drawStars(stars, zoom, settingsState, brightnessFactor, position, mapAzimuth, upsideDown)
+
+                    // Currently, the Moon, the Sun and the planets are under the same setting
+                    if (settingsState[INDEX_PLANET] == SHOW) {
+                        drawPlanets(planets, settingsState, zoom, position, mapAzimuth, upsideDown, textMeasurer)
+                        drawSun(sun, settingsState, zoom, position, mapAzimuth, upsideDown)
+                        drawMoon(moon, backgroundColor, lightColor, zoom, position, mapAzimuth, upsideDown)
+                    }
+
                     // Pointer to North
                     val myTextMeasure = textMeasurer.measure("N")
                     val myTextHeight = myTextMeasure.size.height.toFloat()
@@ -201,15 +218,6 @@ fun WearApp(
                         color = Color.Red,
                         topLeft = calculateNorthPosition(realAzimuth, upsideDown) - Offset( myTextWidth * 0.5f,myTextHeight * 0.5f)
                     )
-
-                    // Stars
-                    drawStars(stars, zoom, settingsState, brightnessFactor, position, mapAzimuth, upsideDown)
-
-                    // Currently, the moon and the planets are both under the same setting
-                    if (settingsState[INDEX_PLANET] == SHOW) {
-                        drawPlanets(planets, settingsState, zoom, position, mapAzimuth, upsideDown, textMeasurer)
-                        drawMoon(moon, backgroundColor, lightColor, zoom, position, mapAzimuth, upsideDown)
-                    }
                 }
             }
         }
@@ -231,7 +239,7 @@ fun DrawScope.drawStars(
         {
             drawCircle(
                 color = color,
-                radius = STAR_DISPLAY_SIZE,
+                radius = STAR_RADIUS,
                 center = star.calculatePosition(position, zoom, -mapAzimuth, upsideDown)
             )
         }
@@ -253,14 +261,14 @@ fun DrawScope.drawPlanets(
         val center = planet.calculatePosition(position, zoom, -mapAzimuth, upsideDown)
         val measured = textMeasurer.measure(text)
         val color = when(settingsState[INDEX_COLOR]) {
-            WHITE_MODE -> planet.col
+            WHITE_MODE -> planet.color
             RED_MODE -> Color.Red
-            else -> planet.col
+            else -> planet.color
         }
 
         drawCircle(
             color = color,
-            radius = PLANET_DISPLAY_SIZE,
+            radius = PLANET_RADIUS,
             center = center
         )
         drawText(
@@ -291,9 +299,31 @@ fun DrawScope.drawMoon(
     }
 }
 
+fun DrawScope.drawSun(
+    sun: Sun,
+    settingsState: SnapshotStateList<Int>,
+    zoom: Float,
+    position: Offset,
+    mapAzimuth: Float,
+    upsideDown: Boolean,
+) {
+        val center = sun.calculatePosition(position, zoom, -mapAzimuth, upsideDown)
+        val color = when(settingsState[INDEX_COLOR]) {
+            WHITE_MODE -> sun.color
+            RED_MODE -> sun.colorRedMode
+            else -> sun.color
+        }
+
+        drawCircle(
+            color = color,
+            radius = SUN_RADIUS,
+            center = center
+        )
+}
+
 fun DrawScope.drawMoonFace(moon: Moon, darkColor: Color, lightColor : Color) {
     drawCircle(
-        color = darkColor,
+        color = blendColors(darkColor, MOON_DARK_COLOR),
         radius = MOON_RADIUS,
         center = Offset(0f,0f)
     )
@@ -331,10 +361,17 @@ fun Path.addMoonArc(arcApexX : Float, dir : Float) {
     )
 }
 
+fun blendColors(c1: Color, c2: Color): Color{
+    val r = (c1.red + c2.red) / 2
+    val g = (c1.green + c2.green) / 2
+    val b = (c1.blue + c2.blue) / 2
+    return Color(r, g, b)
+}
+
 @Preview(device = Devices.WEAR_OS_SMALL_ROUND, showSystemUi = true)
 @Composable
 fun DefaultPreview() {
-    WearApp(ArrayList(), ArrayList(), Moon(0f, 0f, 0.0, 0.0), PackedFloat(1f), 0f, 0f, false) {
+    WearApp(ArrayList(), ArrayList(), Moon(0f, 0f, 0.0, 0.0), Sun(0.0, 0.0), PackedFloat(1f), 0f, 0f, false) {
 
     }
 }

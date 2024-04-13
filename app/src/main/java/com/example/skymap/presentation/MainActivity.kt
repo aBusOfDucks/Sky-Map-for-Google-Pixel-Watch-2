@@ -50,8 +50,10 @@ class MainActivity : ComponentActivity() {
     private var stars : ArrayList<Star> = ArrayList()
     /** Array with planets with converted coordinates */
     private var planets : ArrayList<Planet> = ArrayList()
-    /** The moon with converted coordinates */
+    /** The Moon with converted coordinates */
     private var moon : Moon = Moon(0f, 0f, 0.0, 0.0)
+    /** The Sun with converted coordinates */
+    private var sun: Sun = Sun(0.0, 0.0)
 
     // Parameters for display:
 
@@ -269,11 +271,12 @@ class MainActivity : ComponentActivity() {
         stars = calculateStars(latitude, longitude, starsArray)
         planets = calculatePlanets()
         moon = calculateMoon()
+        sun = calculateSun()
     }
 
     private fun setCanvas() {
         setContent {
-            WearApp(stars, planets, moon, zoom, skyAzimuth, smoothAzimuth, watchUpsideDown) {
+            WearApp(stars, planets, moon, sun, zoom, skyAzimuth, smoothAzimuth, watchUpsideDown) {
                 settingsOpen = it
             }
         }
