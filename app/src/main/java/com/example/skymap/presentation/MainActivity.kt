@@ -147,6 +147,7 @@ class MainActivity : ComponentActivity() {
             // we only care for the newest one,
             // the locations are ordered oldest to newest
             if (result.locations.isNotEmpty()) {
+                locationReceived = true
                 val location = result.locations.last()
                 latitude = location.latitude
                 longitude = location.longitude
@@ -160,6 +161,7 @@ class MainActivity : ComponentActivity() {
 
     private var latitude = 0.0
     private var longitude = 0.0
+    private var locationReceived = false
 
     private val locationPermissionRequest = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
@@ -276,8 +278,13 @@ class MainActivity : ComponentActivity() {
 
     private fun setCanvas() {
         setContent {
-            WearApp(stars, planets, moon, sun, zoom, skyAzimuth, smoothAzimuth, watchUpsideDown) {
-                settingsOpen = it
+            if (locationReceived) {
+                WearApp(stars, planets, moon, sun, zoom, skyAzimuth, smoothAzimuth, watchUpsideDown) {
+                    settingsOpen = it
+                }
+            }
+            else {
+                WaitingScreen()
             }
         }
     }

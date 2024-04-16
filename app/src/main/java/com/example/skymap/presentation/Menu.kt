@@ -1,6 +1,7 @@
 package com.example.skymap.presentation
 
 
+import android.util.Log
 import androidx.compose.animation.core.EaseOut
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.gestures.draggable
@@ -26,15 +27,21 @@ import androidx.wear.compose.material.Icon
 import kotlinx.coroutines.launch
 import kotlin.math.abs
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.EaseOutBounce
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.grid.LazyHorizontalGrid
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import com.example.skymap.R
 import com.example.skymap.presentation.theme.SkyMapTheme
+import kotlin.math.PI
+import kotlin.math.cos
+import kotlin.math.sin
 
 
 const val INDEX_CONSTELLATION = 0
@@ -57,23 +64,28 @@ fun Menu(menuState: Array<Int>, changeState: (Int, Int) -> Unit, menuExit: () ->
     // A way to get the display height
     val context = LocalContext.current
     val displayMetrics = context.resources.displayMetrics
-    val height = displayMetrics.heightPixels
+    val height = with(LocalDensity.current) {displayMetrics.heightPixels.toDp()}
+
+    val density = LocalDensity.current
 
     val offsetY = remember {
         Animatable(0f)
+    }
+    if (abs(offsetY.value) > height.value) {
+        menuExit()
     }
     val coroutineScope = rememberCoroutineScope()
     Box(modifier = Modifier
         .fillMaxSize()
         .draggable(
             state = rememberDraggableState(onDelta = { d ->
+                // Annoyingly, the drag delta is given in pixels,
+                // but offset uses Device Pixels
+                val dpDelta = with(density) {d.toDp()}
                 // Unfortunately, there is no set value for animatable values
                 // We need to snap to them
                 coroutineScope.launch {
-                    offsetY.snapTo(offsetY.value + d)
-                }
-                if (abs(offsetY.value) > height * 0.45) {
-                    menuExit()
+                    offsetY.snapTo(offsetY.value + dpDelta.value)
                 }
             }),
             orientation = Orientation.Vertical,
@@ -82,11 +94,11 @@ fun Menu(menuState: Array<Int>, changeState: (Int, Int) -> Unit, menuExit: () ->
                 // box back to the starting position
                 this.launch {
                     offsetY.animateTo(
-                        targetValue = 0f,
+                        targetValue = if (abs(offsetY.value) > height.value * 0.55) offsetY.value * 2 else 0f,
                         animationSpec = tween(
                             durationMillis = 500,
                             delayMillis = 0,
-                            easing = EaseOut
+                            easing = EaseOutBounce
                         )
                     )
                 }

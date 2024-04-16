@@ -1,19 +1,34 @@
 package com.example.skymap.presentation
 
 import android.util.Log
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.EaseInOut
+import androidx.compose.animation.core.EaseInOutBounce
+import androidx.compose.animation.core.EaseInOutCirc
+import androidx.compose.animation.core.EaseInOutCubic
+import androidx.compose.animation.core.EaseInOutElastic
+import androidx.compose.animation.core.EaseInOutQuad
+import androidx.compose.animation.core.EaseInOutSine
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
@@ -33,7 +48,9 @@ import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.tooling.preview.Devices
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.wear.compose.material.MaterialTheme
+import androidx.wear.compose.material.Text
 import com.example.skymap.presentation.theme.SkyMapTheme
+import kotlinx.coroutines.launch
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.cos
@@ -366,6 +383,50 @@ fun blendColors(c1: Color, c2: Color): Color{
     val g = (c1.green + c2.green) / 2
     val b = (c1.blue + c2.blue) / 2
     return Color(r, g, b)
+}
+
+@Composable
+fun WaitingScreen() {
+    val a = remember {
+        Animatable(0f)
+    }
+    LaunchedEffect("animation") {
+        a.animateTo(
+            2f * PI.toFloat(),
+            animationSpec = infiniteRepeatable(
+                animation = tween(2000, easing = EaseInOut),
+                repeatMode = RepeatMode.Restart
+            )
+        )
+    }
+    SkyMapTheme {
+        Box (modifier = Modifier
+            .fillMaxSize()
+            .background(Color(0f,0f,0.2f,1f))
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize(),
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    "Waiting for GPS...",
+                    modifier = Modifier.align(Alignment.CenterHorizontally)
+                )
+            }
+        }
+        Canvas(modifier = Modifier.fillMaxSize()) {
+            val r = WATCHFACE_RADIUS * 0.9f
+            for (f in arrayOf(1f, 2f, 3f)) {
+                val sa = f * a.value
+                drawCircle(Color.White, 4f, Offset(
+                    WATCHFACE_RADIUS + sin(sa) * r,
+                    WATCHFACE_RADIUS - cos(sa) * r
+                ))
+            }
+        }
+    }
 }
 
 @Preview(device = Devices.WEAR_OS_SMALL_ROUND, showSystemUi = true)
