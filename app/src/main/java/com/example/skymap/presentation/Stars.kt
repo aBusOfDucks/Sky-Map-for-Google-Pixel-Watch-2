@@ -6,7 +6,6 @@ import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.ZoneOffset
 import java.time.ZonedDateTime
-import EquatorialCoordinates
 import Converter
 
 class Star(mag : Double, azimuth: Double, altitude: Double) : SkyPoint(azimuth, altitude) {
@@ -57,7 +56,7 @@ fun calculateStars(latitude: Double, longitude: Double, starsArray: com.google.g
         val ra: Double = coordinates.asJsonObject.getAsJsonPrimitive("ra").asDouble
         val mag: Double = starJsonObject.getAsJsonPrimitive("vmag").asDouble
 
-        val equatorialCoordinates = EquatorialCoordinates(
+        val equatorialCoordinates = GeocentricEquatorialCoordinates(
             rightAscension = ra,
             declination = dec
         )

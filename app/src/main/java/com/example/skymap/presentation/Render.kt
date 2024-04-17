@@ -1,15 +1,7 @@
 package com.example.skymap.presentation
 
-import android.util.Log
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.EaseInOut
-import androidx.compose.animation.core.EaseInOutBounce
-import androidx.compose.animation.core.EaseInOutCirc
-import androidx.compose.animation.core.EaseInOutCubic
-import androidx.compose.animation.core.EaseInOutElastic
-import androidx.compose.animation.core.EaseInOutQuad
-import androidx.compose.animation.core.EaseInOutSine
-import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.tween
@@ -28,7 +20,6 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
@@ -50,7 +41,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.wear.compose.material.MaterialTheme
 import androidx.wear.compose.material.Text
 import com.example.skymap.presentation.theme.SkyMapTheme
-import kotlinx.coroutines.launch
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.cos
@@ -71,15 +61,11 @@ private const val SUN_RADIUS = 20f
 // The minimal zoom at which full names of objects are displayed
 private const val NAME_CUTOFF_ZOOM = 3.0f
 
-open class SkyPoint(azimuth : Double, altitude : Double) {
+open class SkyPoint(open var azimuth : Double, open var altitude : Double) {
     var r: Float = 0.0f
     private var alpha: Float = 0.0f
     open val color : Color = Color.White
     open val colorRedMode: Color = Color.Red
-    init {
-        r = (PROJECTION.convert(altitude) * WATCHFACE_RADIUS).toFloat()
-        alpha = azimuth.toFloat()
-    }
 
     fun calculatePosition(userCenter : Offset, zoom : Float, phi : Float, flip: Boolean): Offset {
         // Normally, the equation of converting angle and radius to x and y is
@@ -90,6 +76,9 @@ open class SkyPoint(azimuth : Double, altitude : Double) {
         // 2. Azimuth increases clockwise when the device is right side up and anticlockwise when
         //    it is upside down
         // 3. The y axis goes down on the screen, higher y value mean lower on the screen
+        r = (PROJECTION.convert(altitude) * WATCHFACE_RADIUS).toFloat()
+        alpha = azimuth.toFloat()
+
         val y = - zoom * r * cos(alpha + phi)
         val x = zoom * r * sin(alpha + phi) * if (flip) -1f else 1f
         return Offset(x, y) + userCenter

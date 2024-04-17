@@ -48,6 +48,8 @@ class MainActivity : ComponentActivity() {
     private var starsArray: com.google.gson.JsonArray? = null
     /** Array with stars with converted coordinates */
     private var stars : ArrayList<Star> = ArrayList()
+    /** Array with planets as parsed JSON objects */
+    private var planetsArray: com.google.gson.JsonArray? = null
     /** Array with planets with converted coordinates */
     private var planets : ArrayList<Planet> = ArrayList()
     /** The Moon with converted coordinates */
@@ -71,7 +73,6 @@ class MainActivity : ComponentActivity() {
     /** Angle between the normal vector of the screen and the vertical axis */
     private var vertAngle = 0f
     private var watchUpsideDown = false
-
 
     // Tasks:
 
@@ -246,6 +247,10 @@ class MainActivity : ComponentActivity() {
         val starsFile = loadJSONFromAnotherFile("stars.json")
         val jsonStars = JsonParser.parseString(starsFile).asJsonObject
         starsArray = jsonStars.getAsJsonArray("stars")
+
+        val planetsFile = loadJSONFromAnotherFile("planets.json")
+        val jsonPlanets = JsonParser.parseString(planetsFile).asJsonObject
+        planetsArray = jsonPlanets.getAsJsonArray("planets")
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -264,14 +269,12 @@ class MainActivity : ComponentActivity() {
         requestLocationPermission()
         parseJSONS()
 
-        stars = calculateStars(latitude, longitude, starsArray)
-
         setCanvas()
     }
 
     private fun calculateObjects() {
         stars = calculateStars(latitude, longitude, starsArray)
-        planets = calculatePlanets()
+        planets = calculatePlanets(latitude, longitude, planetsArray)
         moon = calculateMoon()
         sun = calculateSun()
     }

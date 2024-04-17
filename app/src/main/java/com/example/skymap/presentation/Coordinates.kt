@@ -1,3 +1,7 @@
+
+import com.example.skymap.presentation.GeocentricEquatorialCoordinates
+import com.example.skymap.presentation.GeocentricHorizontalCoordinates
+import com.example.skymap.presentation.toRadians
 import java.time.Duration
 import java.time.LocalTime
 import java.time.ZonedDateTime
@@ -6,12 +10,6 @@ import kotlin.math.asin
 import kotlin.math.atan
 import kotlin.math.cos
 import kotlin.math.sin
-
-// radians, degrees
-data class EquatorialCoordinates(val rightAscension: Double, val declination: Double)
-
-
-data class HorizontalCoordinates(val altitude: Double, val azimuth: Double)
 
 class Converter(
     latitudeDegree: Double, longitudeDegree: Double, zonedTime: ZonedDateTime
@@ -28,19 +26,9 @@ class Converter(
      * @return converter
      */
     init {
-        latitude = degreeToRad(latitudeDegree)
-        longitude = degreeToRad(longitudeDegree)
+        latitude = toRadians(latitudeDegree)
+        longitude = toRadians(longitudeDegree)
         time = zonedTime
-    }
-
-    private fun radianToDegree(angleRadian: Double) : Double {
-        return angleRadian / (2 * PI) * 360
-    }
-
-    private fun degreeToRad(
-        angle: Double
-    ): Double {
-        return angle * PI / 180.0
     }
 
     /**
@@ -58,13 +46,10 @@ class Converter(
     }
 
     /**
-     * Function calculates Julian Date at a given time.
-     * @param time Greenwich Mean Time of observation [ZonedDateTime]
+     * Function calculates Julian Date at a current time.
      * @return Julian Date at a given time [Double]
      */
-    private fun getJulianDate(
-        time: ZonedDateTime
-    ): Double {
+    fun getJulianDate(): Double {
         var year = time.year
         var month = time.month.value
         val day = time.dayOfMonth
@@ -90,10 +75,8 @@ class Converter(
      * @return hour angle of Greenwich Mean Sidereal Time at time
      * of an observation in radians [Double]
      */
-    private fun getGMST(
-        time: ZonedDateTime
-    ): Double {
-        val JD = getJulianDate(time)
+    private fun getGMST(): Double {
+        val JD = getJulianDate()
 
         val d = JD - 2451545.0
         val T = d / 36525
@@ -113,15 +96,15 @@ class Converter(
     /**
      * Function that changes equatorial coordinates of an object to horizontal coordinates,
      * dependent on an observer.
-     * @param equatorial equatorial coordinates of an object [EquatorialCoordinates]
-     * @return horizontal coordinates in radians [HorizontalCoordinates]
+     * @param equatorial equatorial coordinates of an object [GeocentricEquatorialCoordinates]
+     * @return horizontal coordinates in radians [GeocentricHorizontalCoordinates]
      */
     fun equatorialToHorizontal(
-        equatorial: EquatorialCoordinates
-    ): HorizontalCoordinates {
-        val declination = degreeToRad(equatorial.declination)
+        equatorial: GeocentricEquatorialCoordinates
+    ): GeocentricHorizontalCoordinates {
+        val declination = toRadians(equatorial.declination)
 
-        val hourAngle = (getGMST(time) + longitude - equatorial.rightAscension)
+        val hourAngle = (getGMST() + longitude - equatorial.rightAscension)
 
         val sinAltitude = sin(declination) * sin(latitude) + cos(declination) * cos(latitude) * cos(hourAngle)
 
@@ -143,6 +126,7 @@ class Converter(
             azimuth += PI
         }
 
-        return HorizontalCoordinates(altitude, azimuth)
+        return GeocentricHorizontalCoordinates(altitude, azimuth)
     }
+
 }
