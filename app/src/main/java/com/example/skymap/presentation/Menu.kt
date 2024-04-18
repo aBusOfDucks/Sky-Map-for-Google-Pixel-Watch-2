@@ -1,8 +1,6 @@
 package com.example.skymap.presentation
 
 
-import android.util.Log
-import androidx.compose.animation.core.EaseOut
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
@@ -12,9 +10,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -28,9 +24,7 @@ import kotlinx.coroutines.launch
 import kotlin.math.abs
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.EaseOutBounce
-import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.Orientation
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.grid.LazyHorizontalGrid
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableIntStateOf
@@ -38,10 +32,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import com.example.skymap.R
-import com.example.skymap.presentation.theme.SkyMapTheme
-import kotlin.math.PI
-import kotlin.math.cos
-import kotlin.math.sin
 
 
 const val INDEX_CONSTELLATION = 0
@@ -49,8 +39,27 @@ const val INDEX_PLANET = 1
 const val INDEX_BRIGHTNESS = 2
 const val INDEX_COLOR = 3
 
-const val SHOW = 0
-const val DO_NOT_SHOW = 1
+const val PLANET_SHOW = 0
+const val PLANET_SHOW_NO_TEXT = 1
+const val PLANET_HIDE = 2
+
+fun showPlanets(state: Int): Boolean{
+    return when(state) {
+        PLANET_SHOW -> true
+        PLANET_SHOW_NO_TEXT -> true
+        PLANET_HIDE -> false
+        else -> false
+    }
+}
+
+fun showPlanetsText(state: Int): Boolean{
+    return when(state) {
+        PLANET_SHOW -> true
+        PLANET_SHOW_NO_TEXT -> false
+        PLANET_HIDE -> false
+        else -> false
+    }
+}
 
 const val WHITE_MODE = 0
 const val RED_MODE = 1
@@ -130,6 +139,7 @@ fun Menu(menuState: Array<Int>, changeState: (Int, Int) -> Unit, menuExit: () ->
                 IconChangingButton(
                     icons = arrayOf(
                         R.drawable.planet,
+                        R.drawable.constellation_text,
                         R.drawable.planet_no
                     ),
                     startState = menuState[INDEX_PLANET],

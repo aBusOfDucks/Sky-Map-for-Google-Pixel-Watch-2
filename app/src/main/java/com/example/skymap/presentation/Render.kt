@@ -216,11 +216,12 @@ fun WearApp(
                     drawStars(stars, zoom, settingsState, brightnessFactor, position, mapAzimuth, upsideDown)
 
                     // Currently, the Moon, the Sun and the planets are under the same setting
-                    if (settingsState[INDEX_PLANET] == SHOW) {
+                    if (showPlanets(settingsState[INDEX_PLANET])) {
                         drawPlanets(planets, settingsState, zoom, position, mapAzimuth, upsideDown, textMeasurer)
-                        drawSun(sun, settingsState, zoom, position, mapAzimuth, upsideDown)
-                        drawMoon(moon, backgroundColor, lightColor, zoom, position, mapAzimuth, upsideDown)
                     }
+
+                    drawSun(sun, settingsState, zoom, position, mapAzimuth, upsideDown)
+                    drawMoon(moon, backgroundColor, lightColor, zoom, position, mapAzimuth, upsideDown)
 
                     // Pointer to North
                     val myTextMeasure = textMeasurer.measure("N")
@@ -270,9 +271,7 @@ fun DrawScope.drawPlanets(
 ) {
     for(planet in planets)
     {
-        val text : String = if (zoom > NAME_CUTOFF_ZOOM) planet.name else planet.symbol.toString()
         val center = planet.calculatePosition(position, zoom, -mapAzimuth, upsideDown)
-        val measured = textMeasurer.measure(text)
         val color = when(settingsState[INDEX_COLOR]) {
             WHITE_MODE -> planet.color
             RED_MODE -> Color.Red
@@ -284,11 +283,15 @@ fun DrawScope.drawPlanets(
             radius = PLANET_RADIUS,
             center = center
         )
-        drawText(
-            measured,
-            color = color,
-            topLeft = center + Offset(5f - measured.size.width.toFloat() * 0.5f,5f)
-        )
+        if(showPlanetsText(settingsState[INDEX_PLANET])) {
+            val text : String = if (zoom > NAME_CUTOFF_ZOOM) planet.name else planet.symbol.toString()
+            val measured = textMeasurer.measure(text)
+            drawText(
+                measured,
+                color = color,
+                topLeft = center + Offset(5f - measured.size.width.toFloat() * 0.5f, 5f)
+            )
+        }
     }
 }
 
