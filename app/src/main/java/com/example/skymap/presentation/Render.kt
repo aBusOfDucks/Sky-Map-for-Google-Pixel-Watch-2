@@ -67,6 +67,15 @@ open class SkyPoint(open var azimuth : Double, open var altitude : Double) {
     open val color : Color = Color.White
     open val colorRedMode: Color = Color.Red
 
+    init {
+        reproject()
+    }
+
+    fun reproject() {
+        r = (PROJECTION.convert(altitude) * WATCHFACE_RADIUS).toFloat()
+        alpha = azimuth.toFloat()
+    }
+
     fun calculatePosition(userCenter : Offset, zoom : Float, phi : Float, flip: Boolean): Offset {
         // Normally, the equation of converting angle and radius to x and y is
         // given by x = r * cos(alpha), y = r * sin(alpha)
@@ -76,8 +85,6 @@ open class SkyPoint(open var azimuth : Double, open var altitude : Double) {
         // 2. Azimuth increases clockwise when the device is right side up and anticlockwise when
         //    it is upside down
         // 3. The y axis goes down on the screen, higher y value mean lower on the screen
-        r = (PROJECTION.convert(altitude) * WATCHFACE_RADIUS).toFloat()
-        alpha = azimuth.toFloat()
 
         val y = - zoom * r * cos(alpha + phi)
         val x = zoom * r * sin(alpha + phi) * if (flip) -1f else 1f

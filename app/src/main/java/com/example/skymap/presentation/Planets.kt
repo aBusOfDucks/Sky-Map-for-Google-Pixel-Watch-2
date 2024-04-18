@@ -256,6 +256,7 @@ class Planet(
     fun setHorizontal(horizontalPositions: GeocentricHorizontalCoordinates) {
         azimuth = horizontalPositions.azimuth
         altitude = horizontalPositions.altitude
+        reproject()
     }
 }
 
