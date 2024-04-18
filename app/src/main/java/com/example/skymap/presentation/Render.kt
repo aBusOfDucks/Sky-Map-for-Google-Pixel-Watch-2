@@ -197,7 +197,6 @@ fun WearApp(
                             )
                         }
                 ) {
-                    // Background
                     val backgroundColor =
                         when(settingsState[INDEX_COLOR]) {
                             WHITE_MODE -> Color(0f,0f,0.2f,1f)
@@ -210,16 +209,19 @@ fun WearApp(
                             RED_MODE -> Color.Red
                             else -> Color.White
                         }
+
+                    // Background
                     drawCircle(color = backgroundColor, radius = WATCHFACE_RADIUS)
 
                     // Stars
                     drawStars(stars, zoom, settingsState, brightnessFactor, position, mapAzimuth, upsideDown)
 
-                    // Currently, the Moon, the Sun and the planets are under the same setting
+                    // Planets
                     if (showPlanets(settingsState[INDEX_PLANET])) {
                         drawPlanets(planets, settingsState, zoom, position, mapAzimuth, upsideDown, textMeasurer)
                     }
 
+                    // The Moon and the Sun
                     drawSun(sun, settingsState, zoom, position, mapAzimuth, upsideDown)
                     drawMoon(moon, backgroundColor, lightColor, zoom, position, mapAzimuth, upsideDown)
 
