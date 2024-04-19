@@ -8,7 +8,7 @@ import java.time.ZoneOffset
 import java.time.ZonedDateTime
 import Converter
 
-class Star(mag : Double, azimuth: Double, altitude: Double) : SkyPoint(azimuth, altitude) {
+open class Star(mag : Double, azimuth: Double, altitude: Double) : SkyPoint(azimuth, altitude) {
     private var size: Int = 1
     private var minimumZoom: Int = 0
 
@@ -17,7 +17,7 @@ class Star(mag : Double, azimuth: Double, altitude: Double) : SkyPoint(azimuth, 
         minimumZoom = mag.toInt() - 1
     }
 
-    fun getColor(zoom: Float, colorSetting: Int, brightnessFactor : Float): Color {
+    open fun getColor(zoom: Float, colorSetting: Int, brightnessFactor : Float): Color {
 
         val starColor =
             when(colorSetting) {
