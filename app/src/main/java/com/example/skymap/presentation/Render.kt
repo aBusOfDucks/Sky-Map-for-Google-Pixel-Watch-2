@@ -33,11 +33,14 @@ import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.drawscope.rotateRad
 import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextMeasurer
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.tooling.preview.Devices
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.sp
 import androidx.wear.compose.material.MaterialTheme
 import androidx.wear.compose.material.Text
 import com.example.skymap.presentation.theme.SkyMapTheme
@@ -60,6 +63,9 @@ private const val SUN_RADIUS = 20f
 
 // The minimal zoom at which full names of objects are displayed
 private const val NAME_CUTOFF_ZOOM = 3.0f
+
+private const val STRUCTURES_FONT_SIZE = 5
+private const val STRUCTURES_SHOW_ZOOM = 3
 
 open class SkyPoint(open var azimuth : Double, open var altitude : Double) {
     var r: Float = 0.0f
@@ -114,6 +120,7 @@ fun calculateNorthPosition(phi: Float, upsideDown: Boolean) : Offset {
 @Composable
 fun WearApp(
     stars: ArrayList<Star>,
+    skyStructures: ArrayList<SkyStructures>,
     planets: ArrayList<Planet>,
     moon : Moon,
     sun: Sun,
@@ -212,6 +219,11 @@ fun WearApp(
 
                     // Background
                     drawCircle(color = backgroundColor, radius = WATCHFACE_RADIUS)
+
+                    // Sky structures (galaxies, nebulae etc.)
+                    if (zoom >= STRUCTURES_SHOW_ZOOM) {
+                        drawSkyStructures(skyStructures, zoom, settingsState, brightnessFactor, position, mapAzimuth, upsideDown, textMeasurer)
+                    }
 
                     // Stars
                     drawStars(stars, zoom, settingsState, brightnessFactor, position, mapAzimuth, upsideDown)
@@ -386,6 +398,49 @@ fun blendColors(c1: Color, c2: Color): Color{
     return Color(r, g, b)
 }
 
+fun DrawScope.drawSkyStructures(
+    skyStructures: ArrayList<SkyStructures>,
+    zoom: Float,
+    settingsState : SnapshotStateList<Int>,
+    brightnessFactor : Float,
+    position : Offset,
+    mapAzimuth: Float,
+    upsideDown: Boolean,
+    textMeasurer: TextMeasurer) {
+    for(structure in skyStructures)
+    {
+        val color = structure.getColor(zoom, settingsState[INDEX_COLOR], brightnessFactor)
+        if(color.alpha > 0)
+        {
+
+            val center = structure.calculatePosition(position, zoom, -mapAzimuth, upsideDown)
+            val symbol : String = "" + structure.symbol
+            val symbolMeasured = makeStructureTextMeasurer(symbol, color, textMeasurer)
+            drawText(
+                symbolMeasured,
+                topLeft = center
+            )
+            val nameMeasured = makeStructureTextMeasurer(structure.name, color, textMeasurer)
+            val xOffset = (symbolMeasured.size.width.toFloat() - nameMeasured.size.width.toFloat()) * 0.5f
+            val yOffset = symbolMeasured.size.height.toFloat() * 0.8f
+            drawText(
+                nameMeasured,
+                topLeft = center + Offset(xOffset, yOffset)
+            )
+        }
+    }
+}
+
+fun makeStructureTextMeasurer(text: String, color: Color, textMeasurer: TextMeasurer) : TextLayoutResult{
+    return textMeasurer.measure(
+        text = text,
+        style = TextStyle(
+            color = color,
+            fontSize = STRUCTURES_FONT_SIZE.sp
+        )
+    )
+}
+
 @Composable
 fun WaitingScreen() {
     val a = remember {
@@ -433,7 +488,7 @@ fun WaitingScreen() {
 @Preview(device = Devices.WEAR_OS_SMALL_ROUND, showSystemUi = true)
 @Composable
 fun DefaultPreview() {
-    WearApp(ArrayList(), ArrayList(), Moon(0f, 0f, 0.0, 0.0), Sun(0.0, 0.0), PackedFloat(1f), 0f, 0f, false) {
+    WearApp(ArrayList(), ArrayList(), ArrayList(), Moon(0f, 0f, 0.0, 0.0), Sun(0.0, 0.0), PackedFloat(1f), 0f, 0f, false) {
 
     }
 }

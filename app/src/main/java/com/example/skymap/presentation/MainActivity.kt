@@ -48,6 +48,8 @@ class MainActivity : ComponentActivity() {
     private var starsArray: com.google.gson.JsonArray? = null
     /** Array with stars with converted coordinates */
     private var stars : ArrayList<Star> = ArrayList()
+    /** Array with sky structures with converted coordinates */
+    private var skyStructures : ArrayList<SkyStructures> = ArrayList()
     /** Array with planets as parsed JSON objects */
     private var planetsArray: com.google.gson.JsonArray? = null
     /** Array with planets with converted coordinates */
@@ -274,6 +276,8 @@ class MainActivity : ComponentActivity() {
 
     private fun calculateObjects() {
         stars = calculateStars(latitude, longitude, starsArray)
+        // TODO: add real data to skyStructures
+        skyStructures = getSkyStructures()
         planets = calculatePlanets(latitude, longitude, planetsArray)
         moon = calculateMoon()
         sun = calculateSun()
@@ -282,7 +286,7 @@ class MainActivity : ComponentActivity() {
     private fun setCanvas() {
         setContent {
             if (locationReceived) {
-                WearApp(stars, planets, moon, sun, zoom, skyAzimuth, smoothAzimuth, watchUpsideDown) {
+                WearApp(stars, skyStructures, planets, moon, sun, zoom, skyAzimuth, smoothAzimuth, watchUpsideDown) {
                     settingsOpen = it
                 }
             }
