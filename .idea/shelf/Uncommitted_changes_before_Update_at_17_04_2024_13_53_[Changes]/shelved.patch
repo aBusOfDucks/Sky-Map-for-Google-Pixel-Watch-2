@@ -1,0 +1,626 @@
+Index: app/src/main/java/com/example/skymap/presentation/MainActivity.kt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>/* While this template provides a good starting point for using Wear Compose, you can always\r\n * take a look at https://github.com/android/wear-os-samples/tree/main/ComposeStarter and\r\n * https://github.com/android/wear-os-samples/tree/main/ComposeAdvanced to find the most up to date\r\n * changes to the libraries and their usages.\r\n */\r\n\r\npackage com.example.skymap.presentation\r\n\r\nimport android.hardware.Sensor\r\nimport android.hardware.SensorEvent\r\nimport android.hardware.SensorEventListener\r\nimport android.hardware.SensorManager\r\nimport android.opengl.Matrix\r\nimport android.Manifest\r\nimport android.content.pm.PackageManager\r\nimport android.os.Bundle\r\nimport android.os.Handler\r\nimport android.os.Looper\r\nimport androidx.activity.ComponentActivity\r\nimport androidx.activity.compose.setContent\r\nimport android.view.MotionEvent\r\nimport androidx.activity.result.contract.ActivityResultContracts\r\nimport androidx.core.content.ContextCompat\r\nimport com.google.android.gms.location.FusedLocationProviderClient\r\nimport com.google.android.gms.location.LocationCallback\r\nimport com.google.android.gms.location.LocationRequest\r\nimport com.google.android.gms.location.LocationResult\r\nimport com.google.android.gms.location.LocationServices\r\nimport com.google.android.gms.location.Priority\r\nimport com.google.android.wearable.input.RotaryEncoderHelper\r\nimport kotlin.math.PI\r\nimport kotlin.math.acos\r\nimport java.io.IOException\r\nimport kotlin.math.max\r\nimport kotlin.math.min\r\nimport com.google.gson.JsonParser\r\n\r\nprivate const val LOCK_ANGLE = 1f\r\n\r\nconst val MAX_ZOOM = 5f\r\n\r\nconst val AZIMUTH_INERTIA = 0.2f\r\n\r\nclass MainActivity : ComponentActivity() {\r\n    // Astronomical objects:\r\n\r\n    /** Array with stars as parsed JSON objects */\r\n    private var starsArray: com.google.gson.JsonArray? = null\r\n    /** Array with stars with converted coordinates */\r\n    private var stars : ArrayList<Star> = ArrayList()\r\n    /** Array with planets with converted coordinates */\r\n    private var planets : ArrayList<Planet> = ArrayList()\r\n    /** The Moon with converted coordinates */\r\n    private var moon : Moon = Moon(0f, 0f, 0.0, 0.0)\r\n    /** The Sun with converted coordinates */\r\n    private var sun: Sun = Sun(0.0, 0.0)\r\n\r\n    // Parameters for display:\r\n\r\n    private var settingsOpen : Boolean = false\r\n    private val zoom = PackedFloat(1f)\r\n    /** The true azimuth of the watch, from the latest orientation update */\r\n    private var trueAzimuth = 0f\r\n    /** The azimuth of the watch, animated with some inertia so that\r\n     *  it changes in a smooth fation */\r\n    private var smoothAzimuth = 0f\r\n    /** This is the angle that the sky map is rotated by.\r\n     *  Changes smoothly, but also freezes if the watch is too vertical,\r\n     *  or the map is zoomed in */\r\n    private var skyAzimuth = 0f\r\n    /** Angle between the normal vector of the screen and the vertical axis */\r\n    private var vertAngle = 0f\r\n    private var watchUpsideDown = false\r\n\r\n\r\n    // Tasks:\r\n\r\n    /** Handles executing tasks periodically */\r\n    private val handler = Handler(Looper.getMainLooper())\r\n    /** A quick task that runs 25 times a second */\r\n    private val quickTask = object : Runnable {\r\n        override fun run() {\r\n            orientationUpdate()\r\n            handler.postDelayed(this, 40)\r\n        }\r\n    }\r\n    /** A more expensive task that needs to run every few seconds */\r\n    private val longTask = object : Runnable {\r\n        override fun run() {\r\n            calculateObjects()\r\n            update()\r\n            handler.postDelayed(this, 5000)\r\n        }\r\n    }\r\n\r\n    // Orientation:\r\n\r\n    /** Needed for getting orientation */\r\n    private lateinit var sensorManager: SensorManager\r\n\r\n    /** Listens for orientation updates */\r\n    private val sensorListener : SensorEventListener = object : SensorEventListener {\r\n        // Better to create all needed arrays once\r\n\r\n        private val rotationVector = FloatArray(4)\r\n        private val rotationMatrix = FloatArray(16)\r\n        private val normalVector = FloatArray(4)\r\n        private val transformedNormal = FloatArray(4)\r\n        private val orientationAngles = FloatArray(3)\r\n\r\n        override fun onSensorChanged(event: SensorEvent) {\r\n            if (event.sensor.type == Sensor.TYPE_ROTATION_VECTOR) {\r\n                System.arraycopy(event.values, 0, rotationVector, 0, rotationVector.size)\r\n                SensorManager.getRotationMatrixFromVector(rotationMatrix, rotationVector)\r\n                normalVector[0] = 0f\r\n                normalVector[1] = 0f\r\n                normalVector[2] = 1f\r\n                normalVector[3] = 0f\r\n                Matrix.multiplyMV(\r\n                    transformedNormal, 0,\r\n                    rotationMatrix, 0,\r\n                    normalVector, 0\r\n                )\r\n                SensorManager.getOrientation(rotationMatrix, orientationAngles)\r\n                trueAzimuth = orientationAngles[0]\r\n                vertAngle = acos(transformedNormal[2])\r\n            }\r\n        }\r\n\r\n        override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {\r\n            // We don't have any functionality when accuracy of the sensor changes\r\n            // The interface requires this function to be implemented\r\n            return\r\n        }\r\n\r\n    }\r\n\r\n    // Location:\r\n\r\n    /** Can get location from multiple sources */\r\n    private lateinit var fusedLocationClient: FusedLocationProviderClient\r\n    private lateinit var locationRequest: LocationRequest\r\n    /** Handles location updates */\r\n    private val locationCallback = object : LocationCallback() {\r\n        override fun onLocationResult(result: LocationResult) {\r\n            // We may receive location updates in batches\r\n            // we only care for the newest one,\r\n            // the locations are ordered oldest to newest\r\n            if (result.locations.isNotEmpty()) {\r\n                val location = result.locations.last()\r\n                latitude = location.latitude\r\n                longitude = location.longitude\r\n                // We want to update immediately, because\r\n                // the next long task might be in 5 seconds\r\n                calculateObjects()\r\n                update()\r\n            }\r\n        }\r\n    }\r\n\r\n    private var latitude = 0.0\r\n    private var longitude = 0.0\r\n\r\n    private val locationPermissionRequest = registerForActivityResult(\r\n        ActivityResultContracts.RequestMultiplePermissions()\r\n    ) { permissions ->\r\n        when {\r\n            permissions.getOrDefault(Manifest.permission.ACCESS_FINE_LOCATION, false) -> {\r\n                requestLocationUpdates()\r\n            }\r\n            permissions.getOrDefault(Manifest.permission.ACCESS_COARSE_LOCATION, false) -> {\r\n                requestLocationUpdates()\r\n            }\r\n            else -> {\r\n                // We do not have permissions\r\n                // Let's try to ask for them again\r\n                // This is not a very clean solution,\r\n                // but the application will not work without\r\n                // location updates\r\n                requestLocationPermission()\r\n            }\r\n        }\r\n    }\r\n\r\n    // Methods:\r\n\r\n    private fun requestLocationPermission() {\r\n        // If we already have some permissions, we do not need to ask for them\r\n        if (ContextCompat.checkSelfPermission(\r\n                this,\r\n                Manifest.permission.ACCESS_COARSE_LOCATION\r\n            ) != PackageManager.PERMISSION_GRANTED\r\n            &&\r\n            ContextCompat.checkSelfPermission(\r\n                this,\r\n                Manifest.permission.ACCESS_FINE_LOCATION\r\n            ) != PackageManager.PERMISSION_GRANTED\r\n        ) {\r\n            locationPermissionRequest.launch(\r\n                arrayOf(\r\n                    Manifest.permission.ACCESS_COARSE_LOCATION,\r\n                    Manifest.permission.ACCESS_FINE_LOCATION\r\n                )\r\n            )\r\n        }\r\n    }\r\n\r\n    private fun requestLocationUpdates() {\r\n        if (ContextCompat.checkSelfPermission(\r\n                this,\r\n                Manifest.permission.ACCESS_COARSE_LOCATION\r\n            ) == PackageManager.PERMISSION_GRANTED\r\n            ||\r\n            ContextCompat.checkSelfPermission(\r\n                this,\r\n                Manifest.permission.ACCESS_FINE_LOCATION\r\n            ) == PackageManager.PERMISSION_GRANTED\r\n        ) {\r\n            fusedLocationClient.requestLocationUpdates(\r\n                locationRequest,\r\n                locationCallback,\r\n                Looper.getMainLooper()\r\n            )\r\n        }\r\n        else {\r\n            requestLocationPermission()\r\n        }\r\n    }\r\n\r\n    /** Reads a JSON file's contents and returns them as a String */\r\n    private fun loadJSONFromAnotherFile(fileName: String): String? {\r\n        var json: String? = null\r\n        try {\r\n            val inputStream = assets.open(fileName)\r\n            json = inputStream.bufferedReader().use { it.readText() }\r\n            inputStream.close()\r\n        } catch (e: IOException) {\r\n            e.printStackTrace()\r\n        }\r\n        return json\r\n    }\r\n\r\n    private fun parseJSONS() {\r\n        val starsFile = loadJSONFromAnotherFile(\"stars.json\")\r\n        val jsonStars = JsonParser.parseString(starsFile).asJsonObject\r\n        starsArray = jsonStars.getAsJsonArray(\"stars\")\r\n    }\r\n\r\n    override fun onCreate(savedInstanceState: Bundle?) {\r\n        super.onCreate(savedInstanceState)\r\n        sensorManager = getSystemService(SENSOR_SERVICE) as SensorManager\r\n\r\n        fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)\r\n\r\n        val builder = LocationRequest.Builder(1000)\r\n        builder.setPriority(Priority.PRIORITY_HIGH_ACCURACY)\r\n        builder.setDurationMillis(Long.MAX_VALUE)\r\n        // We only want to receive an update if we have moved over 1km away from our previous location\r\n        builder.setMinUpdateDistanceMeters(1000f)\r\n        locationRequest = builder.build()\r\n\r\n        requestLocationPermission()\r\n        parseJSONS()\r\n\r\n        stars = calculateStars(latitude, longitude, starsArray)\r\n\r\n        setCanvas()\r\n    }\r\n\r\n    private fun calculateObjects() {\r\n        stars = calculateStars(latitude, longitude, starsArray)\r\n        planets = calculatePlanets()\r\n        moon = calculateMoon()\r\n        sun = calculateSun()\r\n    }\r\n\r\n    private fun setCanvas() {\r\n        setContent {\r\n            WearApp(stars, planets, moon, sun, zoom, skyAzimuth, smoothAzimuth, watchUpsideDown) {\r\n                settingsOpen = it\r\n            }\r\n        }\r\n    }\r\n\r\n    private fun update() {\r\n        // No need in updating the screen if the menu is open\r\n        if (!settingsOpen) {\r\n            setCanvas()\r\n        }\r\n    }\r\n\r\n    private fun orientationUpdate() {\r\n        smoothAzimuth = blendAngles(smoothAzimuth, trueAzimuth, AZIMUTH_INERTIA)\r\n        if (zoom.v == 1f) {\r\n            if (vertAngle < LOCK_ANGLE) {\r\n                watchUpsideDown = false\r\n                skyAzimuth = blendAngles(skyAzimuth, trueAzimuth, AZIMUTH_INERTIA)\r\n            }\r\n            else if (vertAngle > PI.toFloat() - LOCK_ANGLE) {\r\n                watchUpsideDown = true\r\n                skyAzimuth = blendAngles(skyAzimuth, trueAzimuth, AZIMUTH_INERTIA)\r\n            }\r\n        }\r\n        update()\r\n    }\r\n\r\n    /** Handles rotary input */\r\n    override fun onGenericMotionEvent(event: MotionEvent?): Boolean {\r\n        if (event?.action == MotionEvent.ACTION_SCROLL && RotaryEncoderHelper.isFromRotaryEncoder(event)) {\r\n            val delta = RotaryEncoderHelper.getRotaryAxisValue(event)\r\n            zoom.v -= delta * 0.5f\r\n            zoom.v = max(1f, min(zoom.v, MAX_ZOOM))\r\n            update()\r\n            return true\r\n        }\r\n        return super.onGenericMotionEvent(event)\r\n    }\r\n\r\n    override fun onResume() {\r\n        val sensor = sensorManager.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR)\r\n        if (sensor != null) {\r\n            sensorManager.registerListener(\r\n                sensorListener,\r\n                sensor,\r\n                SensorManager.SENSOR_DELAY_NORMAL,\r\n                SensorManager.SENSOR_DELAY_UI\r\n            )\r\n        }\r\n        // We want to have an update immediately after resuming,\r\n        // that is why post and not postDelayed is used here\r\n        handler.post(quickTask)\r\n        handler.post(longTask)\r\n        requestLocationUpdates()\r\n        super.onResume()\r\n    }\r\n\r\n    override fun onPause() {\r\n        // Cancel updating anything\r\n        sensorManager.unregisterListener(sensorListener)\r\n        handler.removeCallbacks(quickTask)\r\n        handler.removeCallbacks(longTask)\r\n        fusedLocationClient.removeLocationUpdates(locationCallback)\r\n        super.onPause()\r\n    }\r\n}\r\n\r\n/** Shifts angle by multiple of 2PI so that it is within (-PI, PI] */\r\nfun shiftAngle(a: Float) : Float {\r\n    var res = a\r\n    while (res > PI.toFloat()) {\r\n        res -= 2 * PI.toFloat()\r\n    }\r\n    while (res <= -PI.toFloat()) {\r\n        res += 2 * PI.toFloat()\r\n    }\r\n    return res\r\n}\r\n\r\nfun blendAngles(a1: Float, a2: Float, weight: Float) : Float{\r\n    val diff = shiftAngle(a2 - a1)\r\n    return shiftAngle(a1 + weight * diff)\r\n}\r\n\r\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/app/src/main/java/com/example/skymap/presentation/MainActivity.kt b/app/src/main/java/com/example/skymap/presentation/MainActivity.kt
+--- a/app/src/main/java/com/example/skymap/presentation/MainActivity.kt	(revision b99dd5f6e1e421bdb67a5e933ae1c532c149ab03)
++++ b/app/src/main/java/com/example/skymap/presentation/MainActivity.kt	(date 1713353348020)
+@@ -48,6 +48,8 @@
+     private var starsArray: com.google.gson.JsonArray? = null
+     /** Array with stars with converted coordinates */
+     private var stars : ArrayList<Star> = ArrayList()
++    /** Array with planets as parsed JSON objects */
++    private var planetsArray: com.google.gson.JsonArray? = null
+     /** Array with planets with converted coordinates */
+     private var planets : ArrayList<Planet> = ArrayList()
+     /** The Moon with converted coordinates */
+@@ -72,7 +74,6 @@
+     private var vertAngle = 0f
+     private var watchUpsideDown = false
+ 
+-
+     // Tasks:
+ 
+     /** Handles executing tasks periodically */
+@@ -158,8 +159,8 @@
+         }
+     }
+ 
+-    private var latitude = 0.0
+-    private var longitude = 0.0
++    private var latitude = 52.0
++    private var longitude = 21.0
+ 
+     private val locationPermissionRequest = registerForActivityResult(
+         ActivityResultContracts.RequestMultiplePermissions()
+@@ -240,7 +241,11 @@
+         return json
+     }
+ 
+-    private fun parseJSONS() {
++    fun parseJSONs() {
++        val planets = loadJSONFromAnotherFile("planets.json")
++        val jsonPlanets = JsonParser.parseString(planets).asJsonObject
++        planetsArray = jsonPlanets.getAsJsonArray("planets")
++
+         val starsFile = loadJSONFromAnotherFile("stars.json")
+         val jsonStars = JsonParser.parseString(starsFile).asJsonObject
+         starsArray = jsonStars.getAsJsonArray("stars")
+@@ -260,16 +265,15 @@
+         locationRequest = builder.build()
+ 
+         requestLocationPermission()
+-        parseJSONS()
+ 
+-        stars = calculateStars(latitude, longitude, starsArray)
++        parseJSONs()
+ 
+         setCanvas()
+     }
+ 
+     private fun calculateObjects() {
+         stars = calculateStars(latitude, longitude, starsArray)
+-        planets = calculatePlanets()
++        planets = calculatePlanets(latitude, longitude, planetsArray)
+         moon = calculateMoon()
+         sun = calculateSun()
+     }
+Index: app/src/main/java/com/example/skymap/presentation/Planets.kt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package com.example.skymap.presentation\r\n\r\nimport androidx.compose.ui.graphics.Color\r\n\r\nfun calculatePlanets() : ArrayList<Planet>{\r\n    //TODO: Add planet calculation here\r\n    val planets : ArrayList<Planet> = ArrayList()\r\n    planets.addAll(arrayOf(\r\n        Planet(\r\n            \"Mercury\",\r\n            Char(0x263F),\r\n            Color(0.5f,0.5f,0.5f,1f),\r\n            0.8,\r\n            0.5\r\n        ),\r\n        Planet(\r\n            \"Venus\",\r\n            Char(0x2640),\r\n            Color(0.5f,0.48f,0.45f,1f),\r\n            1.6,\r\n            0.5\r\n        ),\r\n        Planet(\r\n            \"Mars\",\r\n            Char(0x2642),\r\n            Color(0.55f,0.42f,0.4f,1f),\r\n            2.4,\r\n            0.5\r\n        ),\r\n        Planet(\r\n            \"Jupiter\",\r\n            Char(0x2643),\r\n            Color(0.7f,0.65f,0.6f,1f),\r\n            3.2,\r\n            0.5\r\n        ),\r\n        Planet(\r\n            \"Saturn\",\r\n            Char(0x2644),\r\n            Color(0.7f,0.7f,0.6f,1f),\r\n            4.0,\r\n            0.5\r\n        ),\r\n        Planet(\r\n            \"Uranus\",\r\n            Char(0x26E2),\r\n            Color(0.6f,0.65f,0.7f,1f),\r\n            4.8,\r\n            0.5\r\n        ),\r\n        Planet(\r\n            \"Neptune\",\r\n            Char(0x2646),\r\n            Color(0.55f,0.6f,0.75f,1f),\r\n            5.6,\r\n            0.5\r\n        ),\r\n    ))\r\n    return planets\r\n}\r\n\r\nclass Planet(\r\n    val name : String,\r\n    val symbol : Char,\r\n    override val color : Color,\r\n    azimuth: Double,\r\n    altitude: Double)\r\n    : SkyPoint(azimuth, altitude) {\r\n}
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/app/src/main/java/com/example/skymap/presentation/Planets.kt b/app/src/main/java/com/example/skymap/presentation/Planets.kt
+--- a/app/src/main/java/com/example/skymap/presentation/Planets.kt	(revision b99dd5f6e1e421bdb67a5e933ae1c532c149ab03)
++++ b/app/src/main/java/com/example/skymap/presentation/Planets.kt	(date 1713353770966)
+@@ -1,69 +1,262 @@
+ package com.example.skymap.presentation
+ 
++import Converter
+ import androidx.compose.ui.graphics.Color
++import java.time.LocalDateTime
++import java.time.ZoneId
++import java.time.ZoneOffset
++import java.time.ZonedDateTime
++import kotlin.math.PI
++import kotlin.math.abs
++import kotlin.math.asin
++import kotlin.math.atan
++import kotlin.math.atan2
++import kotlin.math.cos
++import kotlin.math.sin
++import kotlin.math.sqrt
++
++val colorMap = mapOf(
++    "Mercury" to Color(0.5f,0.5f,0.5f,1f),
++    "Venus" to Color(0.5f,0.48f,0.45f,1f),
++    "Mars" to Color(0.55f,0.42f,0.4f,1f),
++    "Earth" to Color(0.55f,0.42f,0.4f,1f),
++    "Jupiter" to Color(0.7f,0.65f,0.6f,1f),
++    "Saturn" to Color(0.7f,0.7f,0.6f,1f),
++    "Uranus" to Color(0.6f,0.65f,0.7f,1f),
++    "Neptune" to Color(0.55f,0.6f,0.75f,1f)
++)
++
++val symbolMap: Map<String, Char> = mapOf(
++    "Mercury" to Char(0x263F),
++    "Venus" to Char(0x2640),
++    "Mars" to Char(0x2642),
++    "Earth" to Char(0x2642),
++    "Jupiter" to Char(0x2643),
++    "Saturn" to Char(0x2644),
++    "Uranus" to Char(0x26E2),
++    "Neptune" to Char(0x2646)
++)
++
++private fun getPlanetObjects(planetsArray: com.google.gson.JsonArray?) : ArrayList<Planet> {
++
++    var planetsObjects: ArrayList<Planet> = ArrayList()
+ 
+-fun calculatePlanets() : ArrayList<Planet>{
+-    //TODO: Add planet calculation here
+-    val planets : ArrayList<Planet> = ArrayList()
+-    planets.addAll(arrayOf(
+-        Planet(
+-            "Mercury",
+-            Char(0x263F),
+-            Color(0.5f,0.5f,0.5f,1f),
+-            0.8,
+-            0.5
+-        ),
+-        Planet(
+-            "Venus",
+-            Char(0x2640),
+-            Color(0.5f,0.48f,0.45f,1f),
+-            1.6,
+-            0.5
+-        ),
+-        Planet(
+-            "Mars",
+-            Char(0x2642),
+-            Color(0.55f,0.42f,0.4f,1f),
+-            2.4,
+-            0.5
+-        ),
+-        Planet(
+-            "Jupiter",
+-            Char(0x2643),
+-            Color(0.7f,0.65f,0.6f,1f),
+-            3.2,
+-            0.5
+-        ),
+-        Planet(
+-            "Saturn",
+-            Char(0x2644),
+-            Color(0.7f,0.7f,0.6f,1f),
+-            4.0,
+-            0.5
+-        ),
+-        Planet(
+-            "Uranus",
+-            Char(0x26E2),
+-            Color(0.6f,0.65f,0.7f,1f),
+-            4.8,
+-            0.5
+-        ),
+-        Planet(
+-            "Neptune",
+-            Char(0x2646),
+-            Color(0.55f,0.6f,0.75f,1f),
+-            5.6,
+-            0.5
+-        ),
+-    ))
+-    return planets
++    planetsArray?.forEach { planet ->
++        val planetJsonObject = planet.asJsonObject
++
++        val planetName: String = planetJsonObject.getAsJsonPrimitive("name").asString
++
++        val orbitElements = planetJsonObject.getAsJsonObject("orbit_elements")
++
++        val a_au: Double = orbitElements.asJsonObject.getAsJsonPrimitive("a_au").asDouble
++        val e: Double = orbitElements.asJsonObject.getAsJsonPrimitive("e").asDouble
++        val I_deg: Double = orbitElements.asJsonObject.getAsJsonPrimitive("I_deg").asDouble
++        val L_deg: Double = orbitElements.asJsonObject.getAsJsonPrimitive("L_deg").asDouble
++        val long_peri_deg: Double = orbitElements.asJsonObject.getAsJsonPrimitive("long_peri_deg").asDouble
++        val long_node_deg: Double = orbitElements.asJsonObject.getAsJsonPrimitive("long_node_deg").asDouble
++
++        val rateOfChange = planetJsonObject.getAsJsonObject("rate_of_change")
++
++        val a_au_per_cy: Double = rateOfChange.asJsonObject.getAsJsonPrimitive("a_au_per_cy").asDouble
++        val e_per_cy: Double = rateOfChange.asJsonObject.getAsJsonPrimitive("e_per_cy").asDouble
++        val I_deg_per_cy: Double = rateOfChange.asJsonObject.getAsJsonPrimitive("I_deg_per_cy").asDouble
++        val L_deg_per_cy: Double = rateOfChange.asJsonObject.getAsJsonPrimitive("L_deg_per_cy").asDouble
++        val long_peri_deg_per_cy: Double = rateOfChange.asJsonObject.getAsJsonPrimitive("long_peri_deg_per_cy").asDouble
++        val long_node_deg_per_cy: Double = rateOfChange.asJsonObject.getAsJsonPrimitive("long_node_deg_per_cy").asDouble
++
++        var planetObject = Planet(
++            name = planetName,
++            semiMajorAxis0 = a_au,
++            semiMajorAxisRateOfChange = a_au_per_cy,
++            eccentricity0 = e,
++            eccentricityRateOfChange = e_per_cy,
++            inclination0 = I_deg,
++            inclinationRateOfChange = I_deg_per_cy,
++            meanLongitude0 = L_deg,
++            meanLongitudeRateOfChange = L_deg_per_cy,
++            longitudeOfPerihelion0 = long_peri_deg,
++            longitudeOfPerihelionRateOfChange = long_peri_deg_per_cy,
++            longitudeOfAscendingNode0 = long_node_deg,
++            longitudeOfAscendingNodeRateOfChange = long_node_deg_per_cy
++        )
++
++        planetsObjects.add(planetObject)
++    }
++
++    return planetsObjects
++}
++
++fun calculatePlanets(
++    latitude: Double,
++    longitude: Double,
++    planetArray: com.google.gson.JsonArray?
++): ArrayList<Planet> {
++
++    val planetObjects = getPlanetObjects(planetArray)
++
++    val earth = planetObjects[2]
++    planetObjects.removeAt(2)
++
++    val localDateTime = LocalDateTime.now(ZoneOffset.UTC)
++    val zoneId = ZoneId.of("GMT")
++    val zonedDateTime = ZonedDateTime.of(localDateTime, zoneId)
++
++    val converter = Converter(latitude, longitude, zonedDateTime)
++    val JED = converter.getJulianDate()
++
++    val earthPositions: HeliocentricEclipticCoordinates = earth.calculateHeliocentricPositions(JED)
++
++    planetObjects.forEach() { planet ->
++        val heliocentricPositions: HeliocentricEclipticCoordinates = planet.calculateHeliocentricPositions(JED)
++        val equatorialPositions: GeocentricEquatorialCoordinates = planet.calculateGeocentricPositions(heliocentricPositions, earthPositions)
++        val horizontalPositions: GeocentricHorizontalCoordinates = converter.equatorialToHorizontal(equatorialPositions)
++
++        planet.setHorizontal(horizontalPositions)
++    }
++
++    return planetObjects
+ }
+ 
+ class Planet(
+     val name : String,
+-    val symbol : Char,
+-    override val color : Color,
+-    azimuth: Double,
+-    altitude: Double)
+-    : SkyPoint(azimuth, altitude) {
+-}
+\ No newline at end of file
++    val semiMajorAxis0: Double,
++    val semiMajorAxisRateOfChange: Double,
++    val eccentricity0: Double,
++    val eccentricityRateOfChange: Double,
++    val inclination0: Double,
++    val inclinationRateOfChange: Double,
++    val meanLongitude0: Double,
++    val meanLongitudeRateOfChange: Double,
++    val longitudeOfPerihelion0: Double,
++    val longitudeOfPerihelionRateOfChange: Double,
++    val longitudeOfAscendingNode0: Double,
++    val longitudeOfAscendingNodeRateOfChange: Double,
++    val symbol: Char = symbolMap[name]!!,
++    override val color: Color = colorMap[name]!!,
++    azimuth: Double = 0.0,
++    altitude: Double = 0.0
++): SkyPoint(azimuth, altitude){
++
++    private fun calculateEccentricAnomaly(M: Double, e: Double, E_n: Double): Double {
++        val deltaM = M - (E_n - toDegrees(e) * sin(toRadians(E_n)))
++        val deltaE = deltaM / (1 - e * cos(toRadians(E_n)))
++
++        if (abs(deltaE) < 1.0e-6) {
++            return E_n
++        } else {
++            return calculateEccentricAnomaly(M, e, E_n + deltaE)
++        }
++    }
++
++    private fun calculateEclipticCoordinates(
++        omega: Double,
++        Omega: Double,
++        I: Double,
++        helioCoord: HeliocentricOrbitalCoordinates
++    )
++            : HeliocentricEclipticCoordinates {
++        val a = cos(omega) * cos(Omega) - sin(omega) * sin(Omega) * cos(I)
++        val b = -sin(omega) * cos(Omega) - cos(omega) * sin(Omega) * cos(I)
++        val x = a * helioCoord.x + b * helioCoord.y
++
++        val c = cos(omega) * sin(Omega) + sin(omega) * cos(Omega) * cos(I)
++        val d = -sin(omega) * sin(Omega) + cos(omega) * cos(Omega) * cos(I)
++        val y = c * helioCoord.x + d * helioCoord.y
++
++        val z = sin(omega) * sin(I) * helioCoord.x + cos(omega) * sin(I) * helioCoord.y
++
++        return HeliocentricEclipticCoordinates(x, y, z)
++    }
++
++    fun calculateHeliocentricPositions(JD: Double): HeliocentricEclipticCoordinates {
++
++        val T = (JD - 2451545.0) / 36525
++
++        val a = semiMajorAxis0 + semiMajorAxisRateOfChange * T
++        val e = eccentricity0 + eccentricityRateOfChange * T
++        val I = inclination0 + inclinationRateOfChange * T
++        val L = meanLongitude0 + meanLongitudeRateOfChange * T
++        val longitudeOfPerihelion = longitudeOfPerihelion0 + longitudeOfPerihelionRateOfChange * T
++        val longitudeOfAscendingNode =
++            longitudeOfAscendingNode0 + longitudeOfAscendingNodeRateOfChange * T
++
++        val argumentOfPerihelion = longitudeOfPerihelion - longitudeOfAscendingNode
++
++        var M = L - longitudeOfPerihelion
++        M %= 360
++        if (M > 180) M -= 360
++        if (M < -180) M += 360
++
++        val E_0 = M - toDegrees(e) * sin(toRadians(M))
++
++        // in degrees
++        val E = calculateEccentricAnomaly(M, e, E_0)
++
++        // heliocentric coordinates
++        val x_h = a * (cos(toRadians(E)) - e)
++        val y_h = a * sqrt(1 - e * e) * sin(toRadians(E))
++
++        // odległość od słońca
++        //val r_h = sqrt(x_h * x_h + y_h * y_h)
++
++        val heliocentricOrbitalCoordinates = HeliocentricOrbitalCoordinates(x_h, y_h, 0.0)
++
++        // ecliptic coordinates
++        val heliocentricEclipticCoordinates = calculateEclipticCoordinates(
++            toRadians(argumentOfPerihelion),
++            toRadians(longitudeOfAscendingNode),
++            toRadians(I),
++            heliocentricOrbitalCoordinates
++        )
++
++        return heliocentricEclipticCoordinates
++    }
++
++    private fun eclipticToEquatorial(ecliptic: GeocentricEclipticCoordinates)
++            : GeocentricEquatorialCoordinates {
++
++        val a = sin(ecliptic.latitude) * cos(ECLIPTIC_ANGLE)
++        val b = cos(ecliptic.latitude) * sin(ECLIPTIC_ANGLE) * sin(ecliptic.longitude)
++        val dec = asin(a + b)
++
++        val cos_ra = cos(ecliptic.longitude) * cos(ecliptic.latitude) / cos(dec)
++
++        val c = -sin(ecliptic.latitude) * sin(ECLIPTIC_ANGLE)
++        val d = cos(ecliptic.latitude) * cos(ECLIPTIC_ANGLE) * sin(ecliptic.longitude)
++        val sin_ra = (c + d) / cos(dec)
++
++        var ra = atan(sin_ra / cos_ra)
++        if (sin_ra < 0 && cos_ra > 0) {
++            ra += 2 * PI
++        } else if (!(sin_ra > 0 && cos_ra > 0)) {
++            ra += PI
++        }
++
++        return GeocentricEquatorialCoordinates(ra, toDegrees(dec))
++    }
++
++    fun calculateGeocentricPositions(
++        planet: HeliocentricEclipticCoordinates,
++        earth: HeliocentricEclipticCoordinates
++    )
++            : GeocentricEquatorialCoordinates {
++        val x = planet.x - earth.x
++        val y = planet.y - earth.y
++        val z = planet.z - earth.z
++
++        val r = sqrt(x * x + y * y + z * z)
++        val l = atan2(y, x)
++        val b = asin(z / r)
++
++        val ecliptic = GeocentricEclipticCoordinates(l, b)
++
++        return eclipticToEquatorial(ecliptic)
++    }
++
++    fun setHorizontal(horizontalPositions: GeocentricHorizontalCoordinates) {
++        azimuth = horizontalPositions.azimuth
++        altitude = horizontalPositions.altitude
++    }
++}
++
++
+Index: app/src/main/java/com/example/skymap/presentation/Stars.kt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package com.example.skymap.presentation\r\n\r\nimport android.util.Log\r\nimport androidx.compose.ui.graphics.Color\r\nimport java.time.LocalDateTime\r\nimport java.time.ZoneId\r\nimport java.time.ZoneOffset\r\nimport java.time.ZonedDateTime\r\nimport EquatorialCoordinates\r\nimport Converter\r\n\r\nclass Star(mag : Double, azimuth: Double, altitude: Double) : SkyPoint(azimuth, altitude) {\r\n    private var size: Int = 1\r\n    private var minimumZoom: Int = 0\r\n\r\n    init {\r\n        size = BRIGHTNESS_MAX - mag.toInt()\r\n        minimumZoom = mag.toInt() - 1\r\n    }\r\n\r\n    fun getColor(zoom: Float, colorSetting: Int, brightnessFactor : Float): Color {\r\n\r\n        val starColor =\r\n            when(colorSetting) {\r\n                WHITE_MODE -> Color.White\r\n                RED_MODE -> Color.Red\r\n                else -> Color.White\r\n            }\r\n\r\n        val alpha = saturate((zoom + brightnessFactor - minimumZoom) / (MAX_ZOOM - minimumZoom))\r\n\r\n        return starColor.copy(alpha = alpha)\r\n    }\r\n\r\n    /** Makes sure a value doesn't go below 0 or above 1 */\r\n    private fun saturate(v : Float) : Float {\r\n        if (v < 0f)\r\n            return 0f\r\n        if (v > 1f)\r\n            return 1f\r\n        return v\r\n    }\r\n}\r\nfun calculateStars(latitude: Double, longitude: Double, starsArray: com.google.gson.JsonArray?): ArrayList<Star> {\r\n    Log.d(\"Star\", \"Calculating stars $latitude $longitude\")\r\n\r\n    val localDateTime = LocalDateTime.now(ZoneOffset.UTC)\r\n    val zoneId = ZoneId.of(\"GMT\")\r\n    val zonedDateTime = ZonedDateTime.of(localDateTime, zoneId)\r\n    val converter = Converter(latitude, longitude, zonedDateTime)\r\n    val stars : ArrayList<Star> = ArrayList()\r\n\r\n    starsArray?.forEach { star ->\r\n        val starJsonObject = star.asJsonObject\r\n        val coordinates = starJsonObject.getAsJsonObject(\"coordinates\")\r\n        val dec: Double = coordinates.asJsonObject.getAsJsonPrimitive(\"dec\").asDouble\r\n        val ra: Double = coordinates.asJsonObject.getAsJsonPrimitive(\"ra\").asDouble\r\n        val mag: Double = starJsonObject.getAsJsonPrimitive(\"vmag\").asDouble\r\n\r\n        val equatorialCoordinates = EquatorialCoordinates(\r\n            rightAscension = ra,\r\n            declination = dec\r\n        )\r\n\r\n        val horizontalCoordinates = converter.equatorialToHorizontal(equatorialCoordinates)\r\n\r\n        if (horizontalCoordinates.altitude > 0) {\r\n            stars.add(Star(mag, horizontalCoordinates.azimuth, horizontalCoordinates.altitude))\r\n        }\r\n    }\r\n    return stars\r\n}
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/app/src/main/java/com/example/skymap/presentation/Stars.kt b/app/src/main/java/com/example/skymap/presentation/Stars.kt
+--- a/app/src/main/java/com/example/skymap/presentation/Stars.kt	(revision b99dd5f6e1e421bdb67a5e933ae1c532c149ab03)
++++ b/app/src/main/java/com/example/skymap/presentation/Stars.kt	(date 1713351806595)
+@@ -6,7 +6,6 @@
+ import java.time.ZoneId
+ import java.time.ZoneOffset
+ import java.time.ZonedDateTime
+-import EquatorialCoordinates
+ import Converter
+ 
+ class Star(mag : Double, azimuth: Double, altitude: Double) : SkyPoint(azimuth, altitude) {
+@@ -57,7 +56,7 @@
+         val ra: Double = coordinates.asJsonObject.getAsJsonPrimitive("ra").asDouble
+         val mag: Double = starJsonObject.getAsJsonPrimitive("vmag").asDouble
+ 
+-        val equatorialCoordinates = EquatorialCoordinates(
++        val equatorialCoordinates = GeocentricEquatorialCoordinates(
+             rightAscension = ra,
+             declination = dec
+         )
+Index: app/src/main/java/com/example/skymap/presentation/Coordinates.kt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>import java.time.Duration\r\nimport java.time.LocalTime\r\nimport java.time.ZonedDateTime\r\nimport kotlin.math.PI\r\nimport kotlin.math.asin\r\nimport kotlin.math.atan\r\nimport kotlin.math.cos\r\nimport kotlin.math.sin\r\n\r\n// radians, degrees\r\ndata class EquatorialCoordinates(val rightAscension: Double, val declination: Double)\r\n\r\n\r\ndata class HorizontalCoordinates(val altitude: Double, val azimuth: Double)\r\n\r\nclass Converter(\r\n    latitudeDegree: Double, longitudeDegree: Double, zonedTime: ZonedDateTime\r\n) {\r\n    private val latitude: Double\r\n    private val longitude: Double\r\n    private val time: ZonedDateTime\r\n\r\n    /**\r\n     * Constructor\r\n     * @param latitude latitude of an observer in degrees [Double]\r\n     * @param longitude longitude of on observer in degrees [Double]\r\n     * @param time Greenwich sidereal time of observation [ZonedDateTime]\r\n     * @return converter\r\n     */\r\n    init {\r\n        latitude = degreeToRad(latitudeDegree)\r\n        longitude = degreeToRad(longitudeDegree)\r\n        time = zonedTime\r\n    }\r\n\r\n    private fun radianToDegree(angleRadian: Double) : Double {\r\n        return angleRadian / (2 * PI) * 360\r\n    }\r\n\r\n    private fun degreeToRad(\r\n        angle: Double\r\n    ): Double {\r\n        return angle * PI / 180.0\r\n    }\r\n\r\n    /**\r\n     * Function calculates Julian Date at a given Gregorian Day\r\n     * @param year - year in a Gregorian calendar [Int]\r\n     * @param month - month in a Gregorian calendar [Int]\r\n     * @param day - day in a Gregorian calendar [Int]\r\n     * @return Julian Date Number at a given day [Int]\r\n     */\r\n    private fun calculateJDN(year: Int, month: Int, day: Int): Int {\r\n        val a = (month - 14) / 12\r\n        val y = year + 4800 + a\r\n        val m = month - 12 * a - 2\r\n        return (1461 * y) / 4 + (367 * m) / 12 - (3 * (y + 100) / 100) / 4 + day - 32075\r\n    }\r\n\r\n    /**\r\n     * Function calculates Julian Date at a given time.\r\n     * @param time Greenwich Mean Time of observation [ZonedDateTime]\r\n     * @return Julian Date at a given time [Double]\r\n     */\r\n    private fun getJulianDate(\r\n        time: ZonedDateTime\r\n    ): Double {\r\n        var year = time.year\r\n        var month = time.month.value\r\n        val day = time.dayOfMonth\r\n\r\n        // Julian Date Number\r\n        val JDN = calculateJDN(year, month, day)\r\n\r\n        val hour = time.hour.toDouble()\r\n        val minute = time.minute.toDouble()\r\n        val second = time.second.toDouble()\r\n\r\n        // Julian Date\r\n        var JD = JDN.toDouble() + (hour - 12.0) / 24\r\n        JD += minute / 1440\r\n        JD += second / 86400\r\n        return JD\r\n    }\r\n\r\n    /**\r\n     * Function calculates Greenwich Mean Sidereal Time of observation\r\n     * and then changes unit to radian.\r\n     * @param time Greenwich Mean Time of observation [ZonedDateTime]\r\n     * @return hour angle of Greenwich Mean Sidereal Time at time\r\n     * of an observation in radians [Double]\r\n     */\r\n    private fun getGMST(\r\n        time: ZonedDateTime\r\n    ): Double {\r\n        val JD = getJulianDate(time)\r\n\r\n        val d = JD - 2451545.0\r\n        val T = d / 36525\r\n\r\n        var GMST = 24110.54841 + 8640184.812866 * T + 0.093104 * T * T - 0.0000062 * T * T * T\r\n\r\n        val midnight = LocalTime.of(0, 0)\r\n        val currentTime = time.toLocalTime()\r\n        val duration = Duration.between(midnight, currentTime)\r\n\r\n        GMST += duration.seconds\r\n        GMST %= 86400\r\n\r\n        return GMST / 86400 * 2 * PI\r\n    }\r\n\r\n    /**\r\n     * Function that changes equatorial coordinates of an object to horizontal coordinates,\r\n     * dependent on an observer.\r\n     * @param equatorial equatorial coordinates of an object [EquatorialCoordinates]\r\n     * @return horizontal coordinates in radians [HorizontalCoordinates]\r\n     */\r\n    fun equatorialToHorizontal(\r\n        equatorial: EquatorialCoordinates\r\n    ): HorizontalCoordinates {\r\n        val declination = degreeToRad(equatorial.declination)\r\n\r\n        val hourAngle = (getGMST(time) + longitude - equatorial.rightAscension)\r\n\r\n        val sinAltitude = sin(declination) * sin(latitude) + cos(declination) * cos(latitude) * cos(hourAngle)\r\n\r\n        val altitude = asin(sinAltitude)\r\n\r\n        val cosAltitude = cos(altitude)\r\n\r\n        val sinAzimuth = - (cos(declination) * sin(hourAngle)) / cosAltitude\r\n\r\n        val cosAzimuth = - ((cos(declination) * sin(latitude) * cos(hourAngle)) - sin(declination) * cos(latitude)) / cosAltitude\r\n\r\n        val tanAzimuth = sinAzimuth / cosAzimuth\r\n\r\n        var azimuth = atan(tanAzimuth)\r\n\r\n        if (sinAzimuth < 0 && cosAzimuth > 0) {\r\n            azimuth += 2 * PI\r\n        } else if (!(sinAzimuth > 0 && cosAzimuth > 0)) {\r\n            azimuth += PI\r\n        }\r\n\r\n        return HorizontalCoordinates(altitude, azimuth)\r\n    }\r\n}\r\n
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/app/src/main/java/com/example/skymap/presentation/Coordinates.kt b/app/src/main/java/com/example/skymap/presentation/Coordinates.kt
+--- a/app/src/main/java/com/example/skymap/presentation/Coordinates.kt	(revision b99dd5f6e1e421bdb67a5e933ae1c532c149ab03)
++++ b/app/src/main/java/com/example/skymap/presentation/Coordinates.kt	(date 1713353662201)
+@@ -1,3 +1,7 @@
++
++import com.example.skymap.presentation.GeocentricEquatorialCoordinates
++import com.example.skymap.presentation.GeocentricHorizontalCoordinates
++import com.example.skymap.presentation.toRadians
+ import java.time.Duration
+ import java.time.LocalTime
+ import java.time.ZonedDateTime
+@@ -7,12 +11,6 @@
+ import kotlin.math.cos
+ import kotlin.math.sin
+ 
+-// radians, degrees
+-data class EquatorialCoordinates(val rightAscension: Double, val declination: Double)
+-
+-
+-data class HorizontalCoordinates(val altitude: Double, val azimuth: Double)
+-
+ class Converter(
+     latitudeDegree: Double, longitudeDegree: Double, zonedTime: ZonedDateTime
+ ) {
+@@ -28,21 +26,11 @@
+      * @return converter
+      */
+     init {
+-        latitude = degreeToRad(latitudeDegree)
+-        longitude = degreeToRad(longitudeDegree)
++        latitude = toRadians(latitudeDegree)
++        longitude = toRadians(longitudeDegree)
+         time = zonedTime
+     }
+ 
+-    private fun radianToDegree(angleRadian: Double) : Double {
+-        return angleRadian / (2 * PI) * 360
+-    }
+-
+-    private fun degreeToRad(
+-        angle: Double
+-    ): Double {
+-        return angle * PI / 180.0
+-    }
+-
+     /**
+      * Function calculates Julian Date at a given Gregorian Day
+      * @param year - year in a Gregorian calendar [Int]
+@@ -58,13 +46,10 @@
+     }
+ 
+     /**
+-     * Function calculates Julian Date at a given time.
+-     * @param time Greenwich Mean Time of observation [ZonedDateTime]
++     * Function calculates Julian Date at a current time.
+      * @return Julian Date at a given time [Double]
+      */
+-    private fun getJulianDate(
+-        time: ZonedDateTime
+-    ): Double {
++    fun getJulianDate(): Double {
+         var year = time.year
+         var month = time.month.value
+         val day = time.dayOfMonth
+@@ -90,10 +75,8 @@
+      * @return hour angle of Greenwich Mean Sidereal Time at time
+      * of an observation in radians [Double]
+      */
+-    private fun getGMST(
+-        time: ZonedDateTime
+-    ): Double {
+-        val JD = getJulianDate(time)
++    private fun getGMST(): Double {
++        val JD = getJulianDate()
+ 
+         val d = JD - 2451545.0
+         val T = d / 36525
+@@ -113,15 +96,15 @@
+     /**
+      * Function that changes equatorial coordinates of an object to horizontal coordinates,
+      * dependent on an observer.
+-     * @param equatorial equatorial coordinates of an object [EquatorialCoordinates]
+-     * @return horizontal coordinates in radians [HorizontalCoordinates]
++     * @param equatorial equatorial coordinates of an object [GeocentricEquatorialCoordinates]
++     * @return horizontal coordinates in radians [GeocentricHorizontalCoordinates]
+      */
+     fun equatorialToHorizontal(
+-        equatorial: EquatorialCoordinates
+-    ): HorizontalCoordinates {
+-        val declination = degreeToRad(equatorial.declination)
++        equatorial: GeocentricEquatorialCoordinates
++    ): GeocentricHorizontalCoordinates {
++        val declination = toRadians(equatorial.declination)
+ 
+-        val hourAngle = (getGMST(time) + longitude - equatorial.rightAscension)
++        val hourAngle = (getGMST() + longitude - equatorial.rightAscension)
+ 
+         val sinAltitude = sin(declination) * sin(latitude) + cos(declination) * cos(latitude) * cos(hourAngle)
+ 
+@@ -143,6 +126,7 @@
+             azimuth += PI
+         }
+ 
+-        return HorizontalCoordinates(altitude, azimuth)
++        return GeocentricHorizontalCoordinates(altitude, azimuth)
+     }
++
+ }
+Index: app/src/main/java/com/example/skymap/presentation/Render.kt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+>package com.example.skymap.presentation\r\n\r\nimport android.util.Log\r\nimport androidx.compose.foundation.Canvas\r\nimport androidx.compose.foundation.background\r\nimport androidx.compose.foundation.gestures.detectDragGestures\r\nimport androidx.compose.foundation.gestures.detectTapGestures\r\nimport androidx.compose.foundation.layout.Arrangement\r\nimport androidx.compose.foundation.layout.Column\r\nimport androidx.compose.foundation.layout.fillMaxSize\r\nimport androidx.compose.runtime.Composable\r\nimport androidx.compose.runtime.getValue\r\nimport androidx.compose.runtime.mutableFloatStateOf\r\nimport androidx.compose.runtime.mutableStateListOf\r\nimport androidx.compose.runtime.mutableStateOf\r\nimport androidx.compose.runtime.remember\r\nimport androidx.compose.runtime.setValue\r\nimport androidx.compose.runtime.snapshots.SnapshotStateList\r\nimport androidx.compose.ui.Alignment\r\nimport androidx.compose.ui.Modifier\r\nimport androidx.compose.ui.geometry.Offset\r\nimport androidx.compose.ui.geometry.Rect\r\nimport androidx.compose.ui.graphics.Color\r\nimport androidx.compose.ui.graphics.Path\r\nimport androidx.compose.ui.graphics.drawscope.DrawScope\r\nimport androidx.compose.ui.graphics.drawscope.Fill\r\nimport androidx.compose.ui.graphics.drawscope.rotateRad\r\nimport androidx.compose.ui.graphics.drawscope.withTransform\r\nimport androidx.compose.ui.input.pointer.pointerInput\r\nimport androidx.compose.ui.text.TextMeasurer\r\nimport androidx.compose.ui.text.drawText\r\nimport androidx.compose.ui.text.rememberTextMeasurer\r\nimport androidx.compose.ui.tooling.preview.Devices\r\nimport androidx.compose.ui.tooling.preview.Preview\r\nimport androidx.wear.compose.material.MaterialTheme\r\nimport com.example.skymap.presentation.theme.SkyMapTheme\r\nimport kotlin.math.PI\r\nimport kotlin.math.abs\r\nimport kotlin.math.cos\r\nimport kotlin.math.min\r\nimport kotlin.math.sin\r\n\r\nprivate val PROJECTION: Projection = EquidistantAzimuthalProjection()\r\n\r\nprivate const val WATCHFACE_RADIUS = 192.0f\r\n\r\nprivate const val STAR_RADIUS = 2f\r\nprivate const val PLANET_RADIUS = 4f\r\n\r\n// The Sun and the Moon are about the same size in the sky\r\nprivate const val MOON_RADIUS = 20f\r\nprivate const val SUN_RADIUS = 20f\r\n\r\n// The minimal zoom at which full names of objects are displayed\r\nprivate const val NAME_CUTOFF_ZOOM = 3.0f\r\n\r\nopen class SkyPoint(azimuth : Double, altitude : Double) {\r\n    var r: Float = 0.0f\r\n    private var alpha: Float = 0.0f\r\n    open val color : Color = Color.White\r\n    open val colorRedMode: Color = Color.Red\r\n    init {\r\n        r = (PROJECTION.convert(altitude) * WATCHFACE_RADIUS).toFloat()\r\n        alpha = azimuth.toFloat()\r\n    }\r\n\r\n    fun calculatePosition(userCenter : Offset, zoom : Float, phi : Float, flip: Boolean): Offset {\r\n        // Normally, the equation of converting angle and radius to x and y is\r\n        // given by x = r * cos(alpha), y = r * sin(alpha)\r\n        // However:\r\n        // 1. When azimuth == 0, the top of the screen points north\r\n        //    thus, angle equal to 0 should be the top of the screen\r\n        // 2. Azimuth increases clockwise when the device is right side up and anticlockwise when\r\n        //    it is upside down\r\n        // 3. The y axis goes down on the screen, higher y value mean lower on the screen\r\n        val y = - zoom * r * cos(alpha + phi)\r\n        val x = zoom * r * sin(alpha + phi) * if (flip) -1f else 1f\r\n        return Offset(x, y) + userCenter\r\n    }\r\n}\r\n\r\nclass PackedFloat(var v: Float) {\r\n}\r\n\r\nfun calculateNorthPosition(phi: Float, upsideDown: Boolean) : Offset {\r\n    // Normally, the equation of converting angle and radius to x and y is\r\n    // given by x = r * cos(alpha), y = r * sin(alpha)\r\n    // However:\r\n    // 1. When azimuth == 0, the top of the screen points north\r\n    //    thus, angle equal to 0 must mean the top of the screen (hence cos when calculating y)\r\n    // 2. Azimuth increases clockwise when the device is right side up and anticlockwise when\r\n    //    it is upside down\r\n    // 3. The y axis goes down on the screen, higher y value mean lower on the screen\r\n    val flip = if(upsideDown) 1f else -1f\r\n    val r = 0.90f * WATCHFACE_RADIUS\r\n    val x = flip * r * sin(phi) + WATCHFACE_RADIUS\r\n    val y = - r * cos(phi) + WATCHFACE_RADIUS\r\n    return Offset(x, y)\r\n}\r\n\r\n@Composable\r\nfun WearApp(\r\n    stars: ArrayList<Star>,\r\n    planets: ArrayList<Planet>,\r\n    moon : Moon,\r\n    sun: Sun,\r\n    pZoom : PackedFloat,\r\n    mapAzimuth: Float,\r\n    realAzimuth: Float,\r\n    upsideDown: Boolean,\r\n    toggleMenu: (Boolean) -> Unit) {\r\n    val watchCenter = Offset(WATCHFACE_RADIUS, WATCHFACE_RADIUS)\r\n    var positionOffset by remember {\r\n        mutableStateOf(Offset(0f, 0f))\r\n    }\r\n    var zoom by remember {\r\n        mutableFloatStateOf(pZoom.v)\r\n    }\r\n    zoom = pZoom.v\r\n\r\n    var settingsOpen by remember {\r\n        mutableStateOf(false)\r\n    }\r\n\r\n    val settingsState = remember {\r\n        mutableStateListOf(0,0,0,0)\r\n    }\r\n\r\n\r\n    val screenRadius = WATCHFACE_RADIUS / zoom\r\n    // Detects whether the user tried to drag past the map\r\n    if (positionOffset.getDistance() + screenRadius > WATCHFACE_RADIUS) {\r\n        val target = WATCHFACE_RADIUS - screenRadius\r\n        positionOffset *= (target / positionOffset.getDistance())\r\n    }\r\n    val position = watchCenter + positionOffset * zoom\r\n\r\n    val textMeasurer = rememberTextMeasurer()\r\n\r\n    val brightnessFactor = 2f - settingsState[INDEX_BRIGHTNESS].toFloat() * 0.5f\r\n\r\n    SkyMapTheme {\r\n\r\n        Column(\r\n            modifier = Modifier\r\n                .fillMaxSize()\r\n                .background(MaterialTheme.colors.background),\r\n            verticalArrangement = Arrangement.Center,\r\n            horizontalAlignment = Alignment.CenterHorizontally\r\n        ) {\r\n            if(settingsOpen)\r\n            {\r\n                Menu(\r\n                    settingsState.toTypedArray(),\r\n                    {i,v -> settingsState[i] = v},\r\n                    {\r\n                        settingsOpen = false\r\n                        toggleMenu(false)\r\n                    }\r\n                )\r\n            }\r\n            else\r\n            {\r\n                Canvas(\r\n                    modifier = Modifier\r\n                        .fillMaxSize()\r\n                        .pointerInput(\"Drag\") {\r\n                            detectDragGestures { _, dragAmount ->\r\n                                positionOffset += dragAmount / zoom\r\n                            }\r\n                        }\r\n\r\n                        .pointerInput(\"Tap\") {\r\n                            detectTapGestures(\r\n                                onLongPress = {\r\n                                    settingsOpen = true\r\n                                    toggleMenu(true)\r\n                                },\r\n                                onDoubleTap = { offset ->\r\n                                    positionOffset -= (offset - watchCenter) / zoom\r\n                                    zoom = min(MAX_ZOOM, zoom + 1)\r\n                                    pZoom.v = zoom\r\n                                }\r\n                            )\r\n                        }\r\n                ) {\r\n                    // Background\r\n                    val backgroundColor =\r\n                        when(settingsState[INDEX_COLOR]) {\r\n                            WHITE_MODE -> Color(0f,0f,0.2f,1f)\r\n                            RED_MODE -> Color.Black\r\n                            else -> Color(0f,0f,0.2f,1f)\r\n                        }\r\n                    val lightColor =\r\n                        when(settingsState[INDEX_COLOR]) {\r\n                            WHITE_MODE -> Color.White\r\n                            RED_MODE -> Color.Red\r\n                            else -> Color.White\r\n                        }\r\n                    drawCircle(color = backgroundColor, radius = WATCHFACE_RADIUS)\r\n\r\n                    // Stars\r\n                    drawStars(stars, zoom, settingsState, brightnessFactor, position, mapAzimuth, upsideDown)\r\n\r\n                    // Currently, the Moon, the Sun and the planets are under the same setting\r\n                    if (settingsState[INDEX_PLANET] == SHOW) {\r\n                        drawPlanets(planets, settingsState, zoom, position, mapAzimuth, upsideDown, textMeasurer)\r\n                        drawSun(sun, settingsState, zoom, position, mapAzimuth, upsideDown)\r\n                        drawMoon(moon, backgroundColor, lightColor, zoom, position, mapAzimuth, upsideDown)\r\n                    }\r\n\r\n                    // Pointer to North\r\n                    val myTextMeasure = textMeasurer.measure(\"N\")\r\n                    val myTextHeight = myTextMeasure.size.height.toFloat()\r\n                    val myTextWidth = myTextMeasure.size.width.toFloat()\r\n                    drawText(\r\n                        myTextMeasure,\r\n                        color = Color.Red,\r\n                        topLeft = calculateNorthPosition(realAzimuth, upsideDown) - Offset( myTextWidth * 0.5f,myTextHeight * 0.5f)\r\n                    )\r\n                }\r\n            }\r\n        }\r\n    }\r\n}\r\n\r\nfun DrawScope.drawStars(\r\n    stars: ArrayList<Star>,\r\n    zoom: Float,\r\n    settingsState : SnapshotStateList<Int>,\r\n    brightnessFactor : Float,\r\n    position : Offset,\r\n    mapAzimuth: Float,\r\n    upsideDown: Boolean) {\r\n    for(star in stars)\r\n    {\r\n        val color = star.getColor(zoom, settingsState[INDEX_COLOR], brightnessFactor)\r\n        if(color.alpha > 0)\r\n        {\r\n            drawCircle(\r\n                color = color,\r\n                radius = STAR_RADIUS,\r\n                center = star.calculatePosition(position, zoom, -mapAzimuth, upsideDown)\r\n            )\r\n        }\r\n    }\r\n}\r\n\r\nfun DrawScope.drawPlanets(\r\n    planets: ArrayList<Planet>,\r\n    settingsState: SnapshotStateList<Int>,\r\n    zoom: Float,\r\n    position: Offset,\r\n    mapAzimuth: Float,\r\n    upsideDown: Boolean,\r\n    textMeasurer: TextMeasurer\r\n) {\r\n    for(planet in planets)\r\n    {\r\n        val text : String = if (zoom > NAME_CUTOFF_ZOOM) planet.name else planet.symbol.toString()\r\n        val center = planet.calculatePosition(position, zoom, -mapAzimuth, upsideDown)\r\n        val measured = textMeasurer.measure(text)\r\n        val color = when(settingsState[INDEX_COLOR]) {\r\n            WHITE_MODE -> planet.color\r\n            RED_MODE -> Color.Red\r\n            else -> planet.color\r\n        }\r\n\r\n        drawCircle(\r\n            color = color,\r\n            radius = PLANET_RADIUS,\r\n            center = center\r\n        )\r\n        drawText(\r\n            measured,\r\n            color = color,\r\n            topLeft = center + Offset(5f - measured.size.width.toFloat() * 0.5f,5f)\r\n        )\r\n    }\r\n}\r\n\r\nfun DrawScope.drawMoon(\r\n    moon: Moon,\r\n    darkColor: Color,\r\n    lightColor: Color,\r\n    zoom: Float,\r\n    position: Offset,\r\n    mapAzimuth: Float,\r\n    upsideDown: Boolean) {\r\n    val pos = moon.calculatePosition(position, zoom, -mapAzimuth, upsideDown)\r\n    val rotateAngle = moon.angle - mapAzimuth\r\n    // It is easier to transform a set path than to include angles and offsets in the path building\r\n    withTransform({\r\n        scale(if (upsideDown) -1f else 1f, 1f, pos)\r\n        rotateRad(rotateAngle, pos)\r\n        translate(pos.x, pos.y)\r\n    }) {\r\n        drawMoonFace(moon,darkColor, lightColor)\r\n    }\r\n}\r\n\r\nfun DrawScope.drawSun(\r\n    sun: Sun,\r\n    settingsState: SnapshotStateList<Int>,\r\n    zoom: Float,\r\n    position: Offset,\r\n    mapAzimuth: Float,\r\n    upsideDown: Boolean,\r\n) {\r\n        val center = sun.calculatePosition(position, zoom, -mapAzimuth, upsideDown)\r\n        val color = when(settingsState[INDEX_COLOR]) {\r\n            WHITE_MODE -> sun.color\r\n            RED_MODE -> sun.colorRedMode\r\n            else -> sun.color\r\n        }\r\n\r\n        drawCircle(\r\n            color = color,\r\n            radius = SUN_RADIUS,\r\n            center = center\r\n        )\r\n}\r\n\r\nfun DrawScope.drawMoonFace(moon: Moon, darkColor: Color, lightColor : Color) {\r\n    drawCircle(\r\n        color = blendColors(darkColor, MOON_DARK_COLOR),\r\n        radius = MOON_RADIUS,\r\n        center = Offset(0f,0f)\r\n    )\r\n    val path : Path = Path()\r\n    path.moveTo(0f, MOON_RADIUS)\r\n\r\n    val waxp = moon.getWaxPoint() * MOON_RADIUS\r\n    val wanp = moon.getWanePoint() * MOON_RADIUS\r\n\r\n    path.addMoonArc(waxp, 1f)\r\n    path.addMoonArc(wanp, -1f)\r\n    path.close()\r\n    drawPath(path, lightColor, style = Fill)\r\n}\r\n\r\nfun Path.addMoonArc(arcApexX : Float, dir : Float) {\r\n    // In case drawing an oval of width close to 0 causes errors\r\n    if (abs(arcApexX) < 1e-3) {\r\n        lineTo(0f, -MOON_RADIUS * dir)\r\n        return\r\n    }\r\n    var offset = 0f\r\n    if (arcApexX < 0f) {\r\n        // If the arc apex is to negative, the arc needs to go the other way\r\n        offset = PI.toFloat()\r\n    }\r\n    val angle = PI.toFloat() * 0.5f\r\n    val arcLeftX = - abs(arcApexX)\r\n    val arcRightX = abs(arcApexX)\r\n    arcToRad(\r\n        Rect(arcLeftX, -MOON_RADIUS, arcRightX,  MOON_RADIUS),\r\n        -angle * dir + offset,\r\n        2f * angle * dir,\r\n        false\r\n    )\r\n}\r\n\r\nfun blendColors(c1: Color, c2: Color): Color{\r\n    val r = (c1.red + c2.red) / 2\r\n    val g = (c1.green + c2.green) / 2\r\n    val b = (c1.blue + c2.blue) / 2\r\n    return Color(r, g, b)\r\n}\r\n\r\n@Preview(device = Devices.WEAR_OS_SMALL_ROUND, showSystemUi = true)\r\n@Composable\r\nfun DefaultPreview() {\r\n    WearApp(ArrayList(), ArrayList(), Moon(0f, 0f, 0.0, 0.0), Sun(0.0, 0.0), PackedFloat(1f), 0f, 0f, false) {\r\n\r\n    }\r\n}
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/app/src/main/java/com/example/skymap/presentation/Render.kt b/app/src/main/java/com/example/skymap/presentation/Render.kt
+--- a/app/src/main/java/com/example/skymap/presentation/Render.kt	(revision b99dd5f6e1e421bdb67a5e933ae1c532c149ab03)
++++ b/app/src/main/java/com/example/skymap/presentation/Render.kt	(date 1713351952214)
+@@ -1,6 +1,5 @@
+ package com.example.skymap.presentation
+ 
+-import android.util.Log
+ import androidx.compose.foundation.Canvas
+ import androidx.compose.foundation.background
+ import androidx.compose.foundation.gestures.detectDragGestures
+@@ -54,15 +53,11 @@
+ // The minimal zoom at which full names of objects are displayed
+ private const val NAME_CUTOFF_ZOOM = 3.0f
+ 
+-open class SkyPoint(azimuth : Double, altitude : Double) {
++open class SkyPoint(var azimuth : Double, var altitude : Double) {
+     var r: Float = 0.0f
+     private var alpha: Float = 0.0f
+     open val color : Color = Color.White
+     open val colorRedMode: Color = Color.Red
+-    init {
+-        r = (PROJECTION.convert(altitude) * WATCHFACE_RADIUS).toFloat()
+-        alpha = azimuth.toFloat()
+-    }
+ 
+     fun calculatePosition(userCenter : Offset, zoom : Float, phi : Float, flip: Boolean): Offset {
+         // Normally, the equation of converting angle and radius to x and y is
+@@ -73,6 +68,9 @@
+         // 2. Azimuth increases clockwise when the device is right side up and anticlockwise when
+         //    it is upside down
+         // 3. The y axis goes down on the screen, higher y value mean lower on the screen
++        r = (PROJECTION.convert(altitude) * WATCHFACE_RADIUS).toFloat()
++        alpha = azimuth.toFloat()
++
+         val y = - zoom * r * cos(alpha + phi)
+         val x = zoom * r * sin(alpha + phi) * if (flip) -1f else 1f
+         return Offset(x, y) + userCenter
+Index: app/src/main/java/com/example/skymap/presentation/Common.kt
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.CharsetEP
+<+>UTF-8
+===================================================================
+diff --git a/app/src/main/java/com/example/skymap/presentation/Common.kt b/app/src/main/java/com/example/skymap/presentation/Common.kt
+new file mode 100644
+--- /dev/null	(date 1713352112003)
++++ b/app/src/main/java/com/example/skymap/presentation/Common.kt	(date 1713352112003)
+@@ -0,0 +1,25 @@
++package com.example.skymap.presentation
++
++import kotlin.math.PI
++
++const val ECLIPTIC_ANGLE = 0.40910517667
++
++data class HeliocentricOrbitalCoordinates(val x: Double, val y: Double, val z: Double)
++
++data class HeliocentricEclipticCoordinates(val x: Double, val y: Double, val z: Double)
++
++// radians, degrees
++data class GeocentricEquatorialCoordinates(val rightAscension: Double, val declination: Double)
++
++// radians, radians
++data class GeocentricHorizontalCoordinates(val altitude: Double, val azimuth: Double)
++
++data class GeocentricEclipticCoordinates(val longitude: Double, val latitude: Double)
++
++fun toDegrees(n: Double) : Double {
++    return 180 / PI * n
++}
++
++fun toRadians(n: Double) : Double {
++    return PI / 180 * n
++}
