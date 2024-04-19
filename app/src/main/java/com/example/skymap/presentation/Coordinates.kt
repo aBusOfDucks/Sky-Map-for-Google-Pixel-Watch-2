@@ -1,6 +1,11 @@
 
+import com.example.skymap.presentation.ECLIPTIC_ANGLE
+import com.example.skymap.presentation.GeocentricEclipticCoordinates
 import com.example.skymap.presentation.GeocentricEquatorialCoordinates
 import com.example.skymap.presentation.GeocentricHorizontalCoordinates
+import com.example.skymap.presentation.HeliocentricEclipticCoordinates
+import com.example.skymap.presentation.Planet
+import com.example.skymap.presentation.toDegrees
 import com.example.skymap.presentation.toRadians
 import java.time.Duration
 import java.time.LocalTime
@@ -8,8 +13,10 @@ import java.time.ZonedDateTime
 import kotlin.math.PI
 import kotlin.math.asin
 import kotlin.math.atan
+import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.sin
+import kotlin.math.sqrt
 
 class Converter(
     latitudeDegree: Double, longitudeDegree: Double, zonedTime: ZonedDateTime
@@ -130,3 +137,94 @@ class Converter(
     }
 
 }
+
+fun getPlanetObjects(planetsArray: com.google.gson.JsonArray?) : ArrayList<Planet> {
+
+    var planetsObjects: ArrayList<Planet> = ArrayList()
+
+    planetsArray?.forEach { planet ->
+        val planetJsonObject = planet.asJsonObject
+
+        val planetName: String = planetJsonObject.getAsJsonPrimitive("name").asString
+
+        val orbitElements = planetJsonObject.getAsJsonObject("orbit_elements")
+
+        val a_au: Double = orbitElements.asJsonObject.getAsJsonPrimitive("a_au").asDouble
+        val e: Double = orbitElements.asJsonObject.getAsJsonPrimitive("e").asDouble
+        val I_deg: Double = orbitElements.asJsonObject.getAsJsonPrimitive("I_deg").asDouble
+        val L_deg: Double = orbitElements.asJsonObject.getAsJsonPrimitive("L_deg").asDouble
+        val long_peri_deg: Double = orbitElements.asJsonObject.getAsJsonPrimitive("long_peri_deg").asDouble
+        val long_node_deg: Double = orbitElements.asJsonObject.getAsJsonPrimitive("long_node_deg").asDouble
+
+        val rateOfChange = planetJsonObject.getAsJsonObject("rate_of_change")
+
+        val a_au_per_cy: Double = rateOfChange.asJsonObject.getAsJsonPrimitive("a_au_per_cy").asDouble
+        val e_per_cy: Double = rateOfChange.asJsonObject.getAsJsonPrimitive("e_per_cy").asDouble
+        val I_deg_per_cy: Double = rateOfChange.asJsonObject.getAsJsonPrimitive("I_deg_per_cy").asDouble
+        val L_deg_per_cy: Double = rateOfChange.asJsonObject.getAsJsonPrimitive("L_deg_per_cy").asDouble
+        val long_peri_deg_per_cy: Double = rateOfChange.asJsonObject.getAsJsonPrimitive("long_peri_deg_per_cy").asDouble
+        val long_node_deg_per_cy: Double = rateOfChange.asJsonObject.getAsJsonPrimitive("long_node_deg_per_cy").asDouble
+
+        var planetObject = Planet(
+            name = planetName,
+            semiMajorAxis0 = a_au,
+            semiMajorAxisRateOfChange = a_au_per_cy,
+            eccentricity0 = e,
+            eccentricityRateOfChange = e_per_cy,
+            inclination0 = I_deg,
+            inclinationRateOfChange = I_deg_per_cy,
+            meanLongitude0 = L_deg,
+            meanLongitudeRateOfChange = L_deg_per_cy,
+            longitudeOfPerihelion0 = long_peri_deg,
+            longitudeOfPerihelionRateOfChange = long_peri_deg_per_cy,
+            longitudeOfAscendingNode0 = long_node_deg,
+            longitudeOfAscendingNodeRateOfChange = long_node_deg_per_cy
+        )
+
+        planetsObjects.add(planetObject)
+    }
+
+    return planetsObjects
+}
+
+private fun eclipticToEquatorial(ecliptic: GeocentricEclipticCoordinates)
+        : GeocentricEquatorialCoordinates {
+
+    val a = sin(ecliptic.latitude) * cos(ECLIPTIC_ANGLE)
+    val b = cos(ecliptic.latitude) * sin(ECLIPTIC_ANGLE) * sin(ecliptic.longitude)
+    val dec = asin(a + b)
+
+    val cos_ra = cos(ecliptic.longitude) * cos(ecliptic.latitude) / cos(dec)
+
+    val c = -sin(ecliptic.latitude) * sin(ECLIPTIC_ANGLE)
+    val d = cos(ecliptic.latitude) * cos(ECLIPTIC_ANGLE) * sin(ecliptic.longitude)
+    val sin_ra = (c + d) / cos(dec)
+
+    var ra = atan(sin_ra / cos_ra)
+    if (sin_ra < 0 && cos_ra > 0) {
+        ra += 2 * PI
+    } else if (!(sin_ra > 0 && cos_ra > 0)) {
+        ra += PI
+    }
+
+    return GeocentricEquatorialCoordinates(ra, toDegrees(dec))
+}
+
+fun calculateGeocentricPositions(
+    planet: HeliocentricEclipticCoordinates,
+    earth: HeliocentricEclipticCoordinates
+)
+        : GeocentricEquatorialCoordinates {
+    val x = planet.x - earth.x
+    val y = planet.y - earth.y
+    val z = planet.z - earth.z
+
+    val r = sqrt(x * x + y * y + z * z)
+    val l = atan2(y, x)
+    val b = asin(z / r)
+
+    val ecliptic = GeocentricEclipticCoordinates(l, b)
+
+    return eclipticToEquatorial(ecliptic)
+}
+

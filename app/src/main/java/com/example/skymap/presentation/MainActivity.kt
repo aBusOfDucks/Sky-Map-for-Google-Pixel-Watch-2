@@ -276,7 +276,7 @@ class MainActivity : ComponentActivity() {
         stars = calculateStars(latitude, longitude, starsArray)
         planets = calculatePlanets(latitude, longitude, planetsArray)
         moon = calculateMoon()
-        sun = calculateSun()
+        sun = calculateSun(latitude, longitude, planetsArray)
     }
 
     private fun setCanvas() {

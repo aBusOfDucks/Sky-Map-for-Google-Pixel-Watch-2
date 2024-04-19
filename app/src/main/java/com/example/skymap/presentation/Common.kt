@@ -1,5 +1,9 @@
 package com.example.skymap.presentation
 
+import java.time.LocalDateTime
+import java.time.ZoneId
+import java.time.ZoneOffset
+import java.time.ZonedDateTime
 import kotlin.math.PI
 
 const val ECLIPTIC_ANGLE = 0.40910517667
@@ -22,4 +26,11 @@ fun toDegrees(n: Double) : Double {
 
 fun toRadians(n: Double) : Double {
     return PI / 180 * n
+}
+
+fun zonedDateTimeNow() : ZonedDateTime {
+    val localDateTime = LocalDateTime.now(ZoneOffset.UTC)
+    val zoneId = ZoneId.of("GMT")
+
+    return ZonedDateTime.of(localDateTime, zoneId)
 }

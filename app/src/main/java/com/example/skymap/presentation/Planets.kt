@@ -2,15 +2,9 @@ package com.example.skymap.presentation
 
 import Converter
 import androidx.compose.ui.graphics.Color
-import java.time.LocalDateTime
-import java.time.ZoneId
-import java.time.ZoneOffset
-import java.time.ZonedDateTime
-import kotlin.math.PI
+import calculateGeocentricPositions
+import getPlanetObjects
 import kotlin.math.abs
-import kotlin.math.asin
-import kotlin.math.atan
-import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.sin
 import kotlin.math.sqrt
@@ -37,55 +31,6 @@ val symbolMap: Map<String, Char> = mapOf(
     "Neptune" to Char(0x2646)
 )
 
-private fun getPlanetObjects(planetsArray: com.google.gson.JsonArray?) : ArrayList<Planet> {
-
-    var planetsObjects: ArrayList<Planet> = ArrayList()
-
-    planetsArray?.forEach { planet ->
-        val planetJsonObject = planet.asJsonObject
-
-        val planetName: String = planetJsonObject.getAsJsonPrimitive("name").asString
-
-        val orbitElements = planetJsonObject.getAsJsonObject("orbit_elements")
-
-        val a_au: Double = orbitElements.asJsonObject.getAsJsonPrimitive("a_au").asDouble
-        val e: Double = orbitElements.asJsonObject.getAsJsonPrimitive("e").asDouble
-        val I_deg: Double = orbitElements.asJsonObject.getAsJsonPrimitive("I_deg").asDouble
-        val L_deg: Double = orbitElements.asJsonObject.getAsJsonPrimitive("L_deg").asDouble
-        val long_peri_deg: Double = orbitElements.asJsonObject.getAsJsonPrimitive("long_peri_deg").asDouble
-        val long_node_deg: Double = orbitElements.asJsonObject.getAsJsonPrimitive("long_node_deg").asDouble
-
-        val rateOfChange = planetJsonObject.getAsJsonObject("rate_of_change")
-
-        val a_au_per_cy: Double = rateOfChange.asJsonObject.getAsJsonPrimitive("a_au_per_cy").asDouble
-        val e_per_cy: Double = rateOfChange.asJsonObject.getAsJsonPrimitive("e_per_cy").asDouble
-        val I_deg_per_cy: Double = rateOfChange.asJsonObject.getAsJsonPrimitive("I_deg_per_cy").asDouble
-        val L_deg_per_cy: Double = rateOfChange.asJsonObject.getAsJsonPrimitive("L_deg_per_cy").asDouble
-        val long_peri_deg_per_cy: Double = rateOfChange.asJsonObject.getAsJsonPrimitive("long_peri_deg_per_cy").asDouble
-        val long_node_deg_per_cy: Double = rateOfChange.asJsonObject.getAsJsonPrimitive("long_node_deg_per_cy").asDouble
-
-        var planetObject = Planet(
-            name = planetName,
-            semiMajorAxis0 = a_au,
-            semiMajorAxisRateOfChange = a_au_per_cy,
-            eccentricity0 = e,
-            eccentricityRateOfChange = e_per_cy,
-            inclination0 = I_deg,
-            inclinationRateOfChange = I_deg_per_cy,
-            meanLongitude0 = L_deg,
-            meanLongitudeRateOfChange = L_deg_per_cy,
-            longitudeOfPerihelion0 = long_peri_deg,
-            longitudeOfPerihelionRateOfChange = long_peri_deg_per_cy,
-            longitudeOfAscendingNode0 = long_node_deg,
-            longitudeOfAscendingNodeRateOfChange = long_node_deg_per_cy
-        )
-
-        planetsObjects.add(planetObject)
-    }
-
-    return planetsObjects
-}
-
 fun calculatePlanets(
     latitude: Double,
     longitude: Double,
@@ -97,9 +42,7 @@ fun calculatePlanets(
     val earth = planetObjects[2]
     planetObjects.removeAt(2)
 
-    val localDateTime = LocalDateTime.now(ZoneOffset.UTC)
-    val zoneId = ZoneId.of("GMT")
-    val zonedDateTime = ZonedDateTime.of(localDateTime, zoneId)
+    val zonedDateTime = zonedDateTimeNow()
 
     val converter = Converter(latitude, longitude, zonedDateTime)
     val JED = converter.getJulianDate()
@@ -108,7 +51,7 @@ fun calculatePlanets(
 
     planetObjects.forEach() { planet ->
         val heliocentricPositions: HeliocentricEclipticCoordinates = planet.calculateHeliocentricPositions(JED)
-        val equatorialPositions: GeocentricEquatorialCoordinates = planet.calculateGeocentricPositions(heliocentricPositions, earthPositions)
+        val equatorialPositions: GeocentricEquatorialCoordinates = calculateGeocentricPositions(heliocentricPositions, earthPositions)
         val horizontalPositions: GeocentricHorizontalCoordinates = converter.equatorialToHorizontal(equatorialPositions)
 
         planet.setHorizontal(horizontalPositions)
@@ -210,47 +153,6 @@ class Planet(
         )
 
         return heliocentricEclipticCoordinates
-    }
-
-    private fun eclipticToEquatorial(ecliptic: GeocentricEclipticCoordinates)
-            : GeocentricEquatorialCoordinates {
-
-        val a = sin(ecliptic.latitude) * cos(ECLIPTIC_ANGLE)
-        val b = cos(ecliptic.latitude) * sin(ECLIPTIC_ANGLE) * sin(ecliptic.longitude)
-        val dec = asin(a + b)
-
-        val cos_ra = cos(ecliptic.longitude) * cos(ecliptic.latitude) / cos(dec)
-
-        val c = -sin(ecliptic.latitude) * sin(ECLIPTIC_ANGLE)
-        val d = cos(ecliptic.latitude) * cos(ECLIPTIC_ANGLE) * sin(ecliptic.longitude)
-        val sin_ra = (c + d) / cos(dec)
-
-        var ra = atan(sin_ra / cos_ra)
-        if (sin_ra < 0 && cos_ra > 0) {
-            ra += 2 * PI
-        } else if (!(sin_ra > 0 && cos_ra > 0)) {
-            ra += PI
-        }
-
-        return GeocentricEquatorialCoordinates(ra, toDegrees(dec))
-    }
-
-    fun calculateGeocentricPositions(
-        planet: HeliocentricEclipticCoordinates,
-        earth: HeliocentricEclipticCoordinates
-    )
-            : GeocentricEquatorialCoordinates {
-        val x = planet.x - earth.x
-        val y = planet.y - earth.y
-        val z = planet.z - earth.z
-
-        val r = sqrt(x * x + y * y + z * z)
-        val l = atan2(y, x)
-        val b = asin(z / r)
-
-        val ecliptic = GeocentricEclipticCoordinates(l, b)
-
-        return eclipticToEquatorial(ecliptic)
     }
 
     fun setHorizontal(horizontalPositions: GeocentricHorizontalCoordinates) {
