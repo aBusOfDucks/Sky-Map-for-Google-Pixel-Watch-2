@@ -1,6 +1,7 @@
 package com.example.skymap.presentation
 
 
+import android.util.Log
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
@@ -28,6 +29,7 @@ import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.lazy.grid.LazyHorizontalGrid
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
@@ -38,10 +40,21 @@ const val INDEX_CONSTELLATION = 0
 const val INDEX_PLANET = 1
 const val INDEX_BRIGHTNESS = 2
 const val INDEX_COLOR = 3
+const val INDEX_SUN_MOON = 4
 
 const val PLANET_SHOW = 0
 const val PLANET_SHOW_NO_TEXT = 1
 const val PLANET_HIDE = 2
+
+const val FLAG_SUN = 1
+const val FLAG_MOON = 2
+
+const val CONSTELLATIONS_HIDE = 0
+const val CONSTELLATIONS_SHOW_NO_TEXT = 1
+const val CONSTELLATIONS_SHOW = 2
+
+const val WHITE_MODE = 0
+const val RED_MODE = 1
 
 fun showPlanets(state: Int): Boolean{
     return when(state) {
@@ -61,13 +74,11 @@ fun showPlanetsText(state: Int): Boolean{
     }
 }
 
-const val WHITE_MODE = 0
-const val RED_MODE = 1
 
 const val BRIGHTNESS_MAX = 6
 
 @Composable
-fun Menu(menuState: Array<Int>, changeState: (Int, Int) -> Unit, menuExit: () -> Unit) {
+fun Menu(menuState: SnapshotStateList<Int>, menuExit: () -> Unit) {
 
     // https://developer.android.com/reference/android/util/DisplayMetrics
     // A way to get the display height
@@ -117,12 +128,15 @@ fun Menu(menuState: Array<Int>, changeState: (Int, Int) -> Unit, menuExit: () ->
     )
     {
         LazyHorizontalGrid(
-            rows = GridCells.Fixed(2),
+            rows = GridCells.Fixed(3),
             modifier = Modifier
                 .fillMaxSize()
-                .padding(all = Dp(19.0f))
+                .padding(all = Dp(5.0f))
         )
         {
+            item {
+                // This is an empty corner
+            }
             item {
                 IconChangingButton(
                     icons = arrayOf(
@@ -131,20 +145,23 @@ fun Menu(menuState: Array<Int>, changeState: (Int, Int) -> Unit, menuExit: () ->
                         R.drawable.constellation_text
                     ),
                     startState = menuState[INDEX_CONSTELLATION],
-                    onClick = { i -> changeState(INDEX_CONSTELLATION, i) },
+                    onClick = { i -> menuState[INDEX_CONSTELLATION] = i },
                     padding = 2.5f
                 )
             }
             item {
+                // This is an empty corner
+            }
+            item {
                 IconChangingButton(
                     icons = arrayOf(
+                        R.drawable.planet_text,
                         R.drawable.planet,
-                        R.drawable.constellation_text,
                         R.drawable.planet_no
                     ),
                     startState = menuState[INDEX_PLANET],
-                    onClick = { i -> changeState(INDEX_PLANET, i) },
-                    padding = 7.5f
+                    onClick = { i -> menuState[INDEX_PLANET] = i },
+                    padding = 5.0f
                 )
             }
             item {
@@ -159,7 +176,7 @@ fun Menu(menuState: Array<Int>, changeState: (Int, Int) -> Unit, menuExit: () ->
                         R.drawable.brightness_6,
                     ),
                     startState = menuState[INDEX_BRIGHTNESS],
-                    onClick = { i -> changeState(INDEX_BRIGHTNESS, i) },
+                    onClick = { i -> menuState[INDEX_BRIGHTNESS] = i },
                     padding = 2.5f
                 )
             }
@@ -179,7 +196,7 @@ fun Menu(menuState: Array<Int>, changeState: (Int, Int) -> Unit, menuExit: () ->
                         onClick = {
                             index++
                             index %= 2
-                            changeState(INDEX_COLOR, index)
+                            menuState[INDEX_COLOR] = index
                         },
                         colors = ButtonDefaults.buttonColors(
                             backgroundColor = Color.DarkGray,
@@ -195,6 +212,25 @@ fun Menu(menuState: Array<Int>, changeState: (Int, Int) -> Unit, menuExit: () ->
                         )
                     }
                 }
+            }
+            item {
+                // This is an empty corner
+            }
+            item {
+                IconChangingButton(
+                    icons = arrayOf(
+                        R.drawable.no_sun_moon,
+                        R.drawable.sun,
+                        R.drawable.moon,
+                        R.drawable.sun_moon,
+                    ),
+                    startState = menuState[INDEX_SUN_MOON],
+                    onClick = { i -> menuState[INDEX_SUN_MOON] = i },
+                    padding = 5.0f
+                )
+            }
+            item {
+                // This is an empty corner
             }
         }
     }

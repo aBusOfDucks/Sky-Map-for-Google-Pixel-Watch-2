@@ -39,7 +39,7 @@ private const val LOCK_ANGLE = 1f
 
 const val MAX_ZOOM = 5f
 
-const val AZIMUTH_INERTIA = 0.2f
+const val AZIMUTH_INERTIA = 0.5f
 
 class MainActivity : ComponentActivity() {
     // Astronomical objects:
@@ -336,7 +336,7 @@ class MainActivity : ComponentActivity() {
             sensorManager.registerListener(
                 sensorListener,
                 sensor,
-                SensorManager.SENSOR_DELAY_NORMAL,
+                SensorManager.SENSOR_DELAY_UI,
                 SensorManager.SENSOR_DELAY_UI
             )
         }

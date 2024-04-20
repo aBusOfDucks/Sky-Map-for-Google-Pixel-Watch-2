@@ -143,7 +143,13 @@ fun WearApp(
     }
 
     val settingsState = remember {
-        mutableStateListOf(0,0,0,0)
+        mutableStateListOf(
+            CONSTELLATIONS_HIDE,
+            PLANET_SHOW,
+            0,
+            WHITE_MODE,
+            FLAG_MOON or FLAG_SUN
+        )
     }
 
 
@@ -170,14 +176,10 @@ fun WearApp(
         ) {
             if(settingsOpen)
             {
-                Menu(
-                    settingsState.toTypedArray(),
-                    {i,v -> settingsState[i] = v},
-                    {
-                        settingsOpen = false
-                        toggleMenu(false)
-                    }
-                )
+                Menu(settingsState) {
+                    settingsOpen = false
+                    toggleMenu(false)
+                }
             }
             else
             {
@@ -234,8 +236,12 @@ fun WearApp(
                     }
 
                     // The Moon and the Sun
-                    drawSun(sun, settingsState, zoom, position, mapAzimuth, upsideDown)
-                    drawMoon(moon, backgroundColor, lightColor, zoom, position, mapAzimuth, upsideDown)
+                    if (settingsState[INDEX_SUN_MOON] and FLAG_SUN > 0) {
+                        drawSun(sun, settingsState, zoom, position, mapAzimuth, upsideDown)
+                    }
+                    if (settingsState[INDEX_SUN_MOON] and FLAG_MOON > 0) {
+                        drawMoon(moon, backgroundColor, lightColor, zoom, position, mapAzimuth, upsideDown)
+                    }
 
                     // Pointer to North
                     val myTextMeasure = textMeasurer.measure("N")
