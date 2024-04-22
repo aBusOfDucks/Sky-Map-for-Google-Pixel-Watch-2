@@ -124,6 +124,7 @@ fun WearApp(
     planets: ArrayList<Planet>,
     moon : Moon,
     sun: Sun,
+    constellations: ArrayList<Constellation>,
     pZoom : PackedFloat,
     mapAzimuth: Float,
     realAzimuth: Float,
@@ -230,6 +231,19 @@ fun WearApp(
                     // Stars
                     drawStars(stars, zoom, settingsState, brightnessFactor, position, mapAzimuth, upsideDown)
 
+                    if (showConstellations(settingsState[INDEX_CONSTELLATION])) {
+                        drawConstellations(
+                            constellations,
+                            stars,
+                            zoom,
+                            settingsState,
+                            brightnessFactor,
+                            position,
+                            mapAzimuth,
+                            upsideDown
+                        )
+                    }
+
                     // Planets
                     if (showPlanets(settingsState[INDEX_PLANET])) {
                         drawPlanets(planets, settingsState, zoom, position, mapAzimuth, upsideDown, textMeasurer)
@@ -277,6 +291,34 @@ fun DrawScope.drawStars(
                 center = star.calculatePosition(position, zoom, -mapAzimuth, upsideDown)
             )
         }
+    }
+}
+fun DrawScope.drawConstellations(
+    constellations: ArrayList<Constellation>,
+    stars: ArrayList<Star>,
+    zoom: Float,
+    settingsState : SnapshotStateList<Int>,
+    brightnessFactor : Float,
+    position : Offset,
+    mapAzimuth: Float,
+    upsideDown: Boolean) {
+    for (constellation in constellations) {
+        for (line in constellation.lines) {
+            val a_id = line.first
+            val b_id = line.second
+            val star_a: Star? = findStarById(stars, a_id);
+            val star_b: Star? = findStarById(stars, b_id);
+            if (star_a == null || star_b == null) {
+                continue
+            }
+
+            val color = if (settingsState[INDEX_COLOR] == RED_MODE) Color.Red else Color.White
+            val center_a = star_a.calculatePosition(position, zoom, -mapAzimuth, upsideDown)
+            val center_b = star_b.calculatePosition(position, zoom, -mapAzimuth, upsideDown)
+
+            drawLine(color.copy(alpha = 0.5F), center_a, center_b);
+        }
+
     }
 }
 
@@ -494,7 +536,7 @@ fun WaitingScreen() {
 @Preview(device = Devices.WEAR_OS_SMALL_ROUND, showSystemUi = true)
 @Composable
 fun DefaultPreview() {
-    WearApp(ArrayList(), ArrayList(), ArrayList(), Moon(0f, 0f, 0.0, 0.0), Sun(0.0, 0.0), PackedFloat(1f), 0f, 0f, false) {
+    WearApp(ArrayList(), ArrayList(), ArrayList(), Moon(0f, 0f, 0.0, 0.0), Sun(0.0, 0.0), ArrayList(), PackedFloat(1f), 0f, 0f, false) {
 
     }
 }

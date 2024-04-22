@@ -58,6 +58,8 @@ class MainActivity : ComponentActivity() {
     private var moon : Moon = Moon(0f, 0f, 0.0, 0.0)
     /** The Sun with converted coordinates */
     private var sun: Sun = Sun(0.0, 0.0)
+    private var constellationsArray: com.google.gson.JsonArray? = null
+    private var constellations: ArrayList<Constellation> = ArrayList()
 
     // Parameters for display:
 
@@ -253,6 +255,10 @@ class MainActivity : ComponentActivity() {
         val planetsFile = loadJSONFromAnotherFile("planets.json")
         val jsonPlanets = JsonParser.parseString(planetsFile).asJsonObject
         planetsArray = jsonPlanets.getAsJsonArray("planets")
+
+        val constellationsFile = loadJSONFromAnotherFile("constellations.json")
+        val jsonConstellations = JsonParser.parseString(constellationsFile).asJsonObject
+        constellationsArray = jsonConstellations.getAsJsonArray("constellations")
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -281,12 +287,13 @@ class MainActivity : ComponentActivity() {
         planets = calculatePlanets(latitude, longitude, planetsArray)
         moon = calculateMoon()
         sun = calculateSun(latitude, longitude, planetsArray)
+        constellations = calculateConstellations(constellationsArray)
     }
 
     private fun setCanvas() {
         setContent {
             if (locationReceived) {
-                WearApp(stars, skyStructures, planets, moon, sun, zoom, skyAzimuth, smoothAzimuth, watchUpsideDown) {
+                WearApp(stars, skyStructures, planets, moon, sun, constellations, zoom, skyAzimuth, smoothAzimuth, watchUpsideDown) {
                     settingsOpen = it
                 }
             }

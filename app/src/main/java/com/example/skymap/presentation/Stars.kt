@@ -8,9 +8,10 @@ import java.time.ZoneOffset
 import java.time.ZonedDateTime
 import Converter
 
-open class Star(mag : Double, azimuth: Double, altitude: Double) : SkyPoint(azimuth, altitude) {
+open class Star(mag : Double, azimuth: Double, altitude: Double, id: Int) : SkyPoint(azimuth, altitude) {
     private var size: Int = 1
     private var minimumZoom: Int = 0
+    val id: Int = id;
 
     init {
         size = BRIGHTNESS_MAX - mag.toInt()
@@ -55,6 +56,7 @@ fun calculateStars(latitude: Double, longitude: Double, starsArray: com.google.g
         val dec: Double = coordinates.asJsonObject.getAsJsonPrimitive("dec").asDouble
         val ra: Double = coordinates.asJsonObject.getAsJsonPrimitive("ra").asDouble
         val mag: Double = starJsonObject.getAsJsonPrimitive("vmag").asDouble
+        val id: Int = starJsonObject.getAsJsonPrimitive("id").asInt
 
         val equatorialCoordinates = GeocentricEquatorialCoordinates(
             rightAscension = ra,
@@ -64,8 +66,11 @@ fun calculateStars(latitude: Double, longitude: Double, starsArray: com.google.g
         val horizontalCoordinates = converter.equatorialToHorizontal(equatorialCoordinates)
 
         if (horizontalCoordinates.altitude > 0) {
-            stars.add(Star(mag, horizontalCoordinates.azimuth, horizontalCoordinates.altitude))
+            stars.add(Star(mag, horizontalCoordinates.azimuth, horizontalCoordinates.altitude, id))
         }
     }
     return stars
+}
+fun findStarById(stars: ArrayList<Star>, x: Int): Star? {
+    return stars.find { it.id == x }
 }

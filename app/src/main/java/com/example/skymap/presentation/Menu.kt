@@ -75,6 +75,25 @@ fun showPlanetsText(state: Int): Boolean{
 }
 
 
+fun showConstellations(state: Int) : Boolean {
+    return when(state) {
+        CONSTELLATIONS_SHOW -> true
+        CONSTELLATIONS_SHOW_NO_TEXT -> true
+        CONSTELLATIONS_HIDE-> false
+        else -> false
+    }
+}
+
+fun showConstellationsText(state: Int) : Boolean {
+    return when(state) {
+        CONSTELLATIONS_SHOW -> true
+        CONSTELLATIONS_SHOW_NO_TEXT -> false
+        CONSTELLATIONS_HIDE-> false
+        else -> false
+    }
+}
+
+
 const val BRIGHTNESS_MAX = 6
 
 @Composable

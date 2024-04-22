@@ -3,7 +3,7 @@ package com.example.skymap.presentation
 import androidx.compose.ui.graphics.Color
 import kotlin.random.Random
 
-class SkyStructures(mag : Double, azimuth: Double, altitude: Double) : Star(mag, azimuth, altitude) {
+class SkyStructures(mag : Double, azimuth: Double, altitude: Double, id: Int) : Star(mag, azimuth, altitude, id) {
     // TODO: change default emojis
     var symbol: Char = Char(0x2728)
     var name: String = ""
@@ -36,7 +36,7 @@ fun getSkyStructures() : ArrayList<SkyStructures> {
         val m = Random.nextDouble(3.14)
         val az = Random.nextDouble(3.14)
         val al = Random.nextDouble(3.14)
-        val temp = SkyStructures(m, az, al)
+        val temp = SkyStructures(m, az, al, 0)
         ans.add(temp)
     }
     return ans
