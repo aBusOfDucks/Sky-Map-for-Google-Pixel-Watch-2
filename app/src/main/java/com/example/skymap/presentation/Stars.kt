@@ -41,14 +41,14 @@ open class Star(mag : Double, azimuth: Double, altitude: Double, id: Int) : SkyP
         return v
     }
 }
-fun calculateStars(latitude: Double, longitude: Double, starsArray: com.google.gson.JsonArray?): ArrayList<Star> {
+fun calculateStars(latitude: Double, longitude: Double, starsArray: com.google.gson.JsonArray?): HashMap<Int,Star> {
     Log.d("Star", "Calculating stars $latitude $longitude")
 
     val localDateTime = LocalDateTime.now(ZoneOffset.UTC)
     val zoneId = ZoneId.of("GMT")
     val zonedDateTime = ZonedDateTime.of(localDateTime, zoneId)
     val converter = Converter(latitude, longitude, zonedDateTime)
-    val stars : ArrayList<Star> = ArrayList()
+    val stars : HashMap<Int,Star> = HashMap()
 
     starsArray?.forEach { star ->
         val starJsonObject = star.asJsonObject
@@ -66,11 +66,11 @@ fun calculateStars(latitude: Double, longitude: Double, starsArray: com.google.g
         val horizontalCoordinates = converter.equatorialToHorizontal(equatorialCoordinates)
 
         if (horizontalCoordinates.altitude > 0) {
-            stars.add(Star(mag, horizontalCoordinates.azimuth, horizontalCoordinates.altitude, id))
+            stars[id] = Star(mag, horizontalCoordinates.azimuth, horizontalCoordinates.altitude, id)
         }
     }
     return stars
 }
-fun findStarById(stars: ArrayList<Star>, x: Int): Star? {
-    return stars.find { it.id == x }
+fun findStarById(stars: HashMap<Int,Star>, x: Int): Star? {
+    return stars[x]
 }

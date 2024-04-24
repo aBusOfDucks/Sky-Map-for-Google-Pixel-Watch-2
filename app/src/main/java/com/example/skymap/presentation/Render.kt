@@ -119,7 +119,7 @@ fun calculateNorthPosition(phi: Float, upsideDown: Boolean) : Offset {
 
 @Composable
 fun WearApp(
-    stars: ArrayList<Star>,
+    stars: HashMap<Int,Star>,
     skyStructures: ArrayList<SkyStructures>,
     planets: ArrayList<Planet>,
     moon : Moon,
@@ -273,15 +273,16 @@ fun WearApp(
 }
 
 fun DrawScope.drawStars(
-    stars: ArrayList<Star>,
+    stars: HashMap<Int, Star>,
     zoom: Float,
     settingsState : SnapshotStateList<Int>,
     brightnessFactor : Float,
     position : Offset,
     mapAzimuth: Float,
     upsideDown: Boolean) {
-    for(star in stars)
+    for(mEntry in stars)
     {
+        val star = mEntry.value
         val color = star.getColor(zoom, settingsState[INDEX_COLOR], brightnessFactor)
         if(color.alpha > 0)
         {
@@ -295,7 +296,7 @@ fun DrawScope.drawStars(
 }
 fun DrawScope.drawConstellations(
     constellations: ArrayList<Constellation>,
-    stars: ArrayList<Star>,
+    stars: HashMap<Int, Star>,
     zoom: Float,
     settingsState : SnapshotStateList<Int>,
     brightnessFactor : Float,
@@ -536,7 +537,7 @@ fun WaitingScreen() {
 @Preview(device = Devices.WEAR_OS_SMALL_ROUND, showSystemUi = true)
 @Composable
 fun DefaultPreview() {
-    WearApp(ArrayList(), ArrayList(), ArrayList(), Moon(0f, 0f, 0.0, 0.0), Sun(0.0, 0.0), ArrayList(), PackedFloat(1f), 0f, 0f, false) {
+    WearApp(HashMap(), ArrayList(), ArrayList(), Moon(0f, 0f, 0.0, 0.0), Sun(0.0, 0.0), ArrayList(), PackedFloat(1f), 0f, 0f, false) {
 
     }
 }

@@ -47,7 +47,7 @@ class MainActivity : ComponentActivity() {
     /** Array with stars as parsed JSON objects */
     private var starsArray: com.google.gson.JsonArray? = null
     /** Array with stars with converted coordinates */
-    private var stars : ArrayList<Star> = ArrayList()
+    private var stars : HashMap<Int,Star> = HashMap()
     /** Array with sky structures with converted coordinates */
     private var skyStructures : ArrayList<SkyStructures> = ArrayList()
     /** Array with planets as parsed JSON objects */
