@@ -18,7 +18,7 @@ class SkyStructures(mag : Double, azimuth: Double, altitude: Double, id: Int) : 
         }
     }
 
-    override fun getColor(zoom: Float, colorSetting: Int, brightnessFactor : Float): Color {
+    override fun getColor(zoom: Float, colorSetting: Int, brightness : Float, scaleFactor: Float): Color {
         return when(colorSetting) {
                 WHITE_MODE -> Color.White
                 RED_MODE -> Color.Red

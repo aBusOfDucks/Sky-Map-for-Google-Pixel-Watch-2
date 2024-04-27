@@ -164,7 +164,6 @@ fun WearApp(
 
     val textMeasurer = rememberTextMeasurer()
 
-    val brightnessFactor = 2f - settingsState[INDEX_BRIGHTNESS].toFloat() * 0.5f
 
     SkyMapTheme {
 
@@ -225,11 +224,11 @@ fun WearApp(
 
                     // Sky structures (galaxies, nebulae etc.)
                     if (zoom >= STRUCTURES_SHOW_ZOOM) {
-                        drawSkyStructures(skyStructures, zoom, settingsState, brightnessFactor, position, mapAzimuth, upsideDown, textMeasurer)
+                        drawSkyStructures(skyStructures, zoom, settingsState, position, mapAzimuth, upsideDown, textMeasurer)
                     }
 
                     // Stars
-                    drawStars(stars, zoom, settingsState, brightnessFactor, position, mapAzimuth, upsideDown)
+                    drawStars(stars, zoom, settingsState, position, mapAzimuth, upsideDown)
 
                     if (showConstellations(settingsState[INDEX_CONSTELLATION])) {
                         drawConstellations(
@@ -237,7 +236,6 @@ fun WearApp(
                             stars,
                             zoom,
                             settingsState,
-                            brightnessFactor,
                             position,
                             mapAzimuth,
                             upsideDown
@@ -276,14 +274,16 @@ fun DrawScope.drawStars(
     stars: HashMap<Int, Star>,
     zoom: Float,
     settingsState : SnapshotStateList<Int>,
-    brightnessFactor : Float,
     position : Offset,
     mapAzimuth: Float,
     upsideDown: Boolean) {
+    val brightnessF = settingsState[INDEX_BRIGHTNESS].toFloat()
+    val brightnessScaleFactor = 1f / maxStarAlpha(brightnessF)
+
     for(mEntry in stars)
     {
         val star = mEntry.value
-        val color = star.getColor(zoom, settingsState[INDEX_COLOR], brightnessFactor)
+        val color = star.getColor(zoom, settingsState[INDEX_COLOR], brightnessF, brightnessScaleFactor)
         if(color.alpha > 0)
         {
             drawCircle(
@@ -299,7 +299,6 @@ fun DrawScope.drawConstellations(
     stars: HashMap<Int, Star>,
     zoom: Float,
     settingsState : SnapshotStateList<Int>,
-    brightnessFactor : Float,
     position : Offset,
     mapAzimuth: Float,
     upsideDown: Boolean) {
@@ -451,14 +450,14 @@ fun DrawScope.drawSkyStructures(
     skyStructures: ArrayList<SkyStructures>,
     zoom: Float,
     settingsState : SnapshotStateList<Int>,
-    brightnessFactor : Float,
     position : Offset,
     mapAzimuth: Float,
     upsideDown: Boolean,
     textMeasurer: TextMeasurer) {
     for(structure in skyStructures)
     {
-        val color = structure.getColor(zoom, settingsState[INDEX_COLOR], brightnessFactor)
+        // Current;y passing dummy values to arguments that are ignored in the overriden function
+        val color = structure.getColor(zoom, settingsState[INDEX_COLOR], 0f,1f)
         if(color.alpha > 0)
         {
 

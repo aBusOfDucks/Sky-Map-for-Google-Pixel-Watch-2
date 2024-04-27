@@ -8,17 +8,15 @@ import java.time.ZoneOffset
 import java.time.ZonedDateTime
 import Converter
 
-open class Star(mag : Double, azimuth: Double, altitude: Double, id: Int) : SkyPoint(azimuth, altitude) {
+open class Star(private val mag : Double, azimuth: Double, altitude: Double, id: Int) : SkyPoint(azimuth, altitude) {
     private var size: Int = 1
-    private var minimumZoom: Int = 0
     val id: Int = id;
 
     init {
         size = BRIGHTNESS_MAX - mag.toInt()
-        minimumZoom = mag.toInt() - 1
     }
 
-    open fun getColor(zoom: Float, colorSetting: Int, brightnessFactor : Float): Color {
+    open fun getColor(zoom: Float, colorSetting: Int, brightness : Float, scaleFactor : Float): Color {
 
         val starColor =
             when(colorSetting) {
@@ -27,7 +25,9 @@ open class Star(mag : Double, azimuth: Double, altitude: Double, id: Int) : SkyP
                 else -> Color.White
             }
 
-        val alpha = saturate((zoom + brightnessFactor - minimumZoom) / (MAX_ZOOM - minimumZoom))
+        val alpha = saturate(
+            scaleFactor * unscaledStarAlpha(brightness, zoom, mag.toFloat())
+        )
 
         return starColor.copy(alpha = alpha)
     }
@@ -41,6 +41,29 @@ open class Star(mag : Double, azimuth: Double, altitude: Double, id: Int) : SkyP
         return v
     }
 }
+
+private const val BRIGHTNESS_INTERSECTION_POINT = 9.1f
+private const val INVERSE_SLOPE = BRIGHTNESS_INTERSECTION_POINT * 4f - 4f
+
+private fun unscaledStarAlpha(brightness: Float, zoom: Float, mag : Float) : Float {
+    /*
+    The alpha is calculated using the equation that satisfies the following conditions:
+    1. The effective magnitude is equal to mag + brightness / 2.
+    2. If the effective magnitude is 0, then alpha is 1.
+    3. If the effective magnitude is 4 and zoom is 1, then alpha is 0
+    4. If zoom == BRIGHTNESS_INTERSECTION_POINT, then alpha is 1
+    5. If zoom is constant, then alpha is a linear function of the effective magnitude.
+    6. If the effective magnitude is constant, then alpha is a linear function of zoom.
+     */
+    val effectiveMagnitude = mag + brightness * 0.5f
+    return 1f + (zoom - BRIGHTNESS_INTERSECTION_POINT) * effectiveMagnitude / INVERSE_SLOPE
+}
+
+/** Returns the maximum alpha value that any star can have for this brightness setting */
+fun maxStarAlpha(brightness: Float) : Float {
+    return unscaledStarAlpha(brightness, 5f, 0f)
+}
+
 fun calculateStars(latitude: Double, longitude: Double, starsArray: com.google.gson.JsonArray?): HashMap<Int,Star> {
     Log.d("Star", "Calculating stars $latitude $longitude")
 
