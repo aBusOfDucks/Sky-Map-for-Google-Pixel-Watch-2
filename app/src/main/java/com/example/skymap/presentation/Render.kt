@@ -1,5 +1,7 @@
 package com.example.skymap.presentation
 
+import android.graphics.RectF
+import android.util.Log
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.EaseInOut
 import androidx.compose.animation.core.RepeatMode
@@ -331,6 +333,7 @@ fun DrawScope.drawPlanets(
     upsideDown: Boolean,
     textMeasurer: TextMeasurer
 ) {
+    val textRectList : ArrayList<RectF> = ArrayList()
     for(planet in planets)
     {
         val center = planet.calculatePosition(position, zoom, -mapAzimuth, upsideDown)
@@ -347,11 +350,23 @@ fun DrawScope.drawPlanets(
         )
         if(showPlanetsText(settingsState[INDEX_PLANET])) {
             val text : String = if (zoom > NAME_CUTOFF_ZOOM) planet.name else planet.symbol.toString()
-            val measured = textMeasurer.measure(text)
+            val textLayoutResult = textMeasurer.measure(text)
+            val topLeft = placePlanetText(
+                center,
+                textLayoutResult.size.width.toFloat(),
+                textLayoutResult.size.height.toFloat(),
+                textRectList
+            )
+            textRectList.add(RectF(
+                topLeft.x,
+                topLeft.y,
+                topLeft.x + textLayoutResult.size.width.toFloat(),
+                topLeft.y + textLayoutResult.size.height.toFloat()
+            ))
             drawText(
-                measured,
+                textLayoutResult,
                 color = color,
-                topLeft = center + Offset(5f - measured.size.width.toFloat() * 0.5f, 5f)
+                topLeft = topLeft
             )
         }
     }
