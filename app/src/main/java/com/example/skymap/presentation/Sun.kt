@@ -8,7 +8,7 @@ import com.google.gson.JsonArray
 
 class Sun(azimuth : Double, altitude : Double) : SkyPoint(azimuth,altitude) {
     override val color : Color = Color(255,255,0)
-    override val colorRedMode: Color = Color(255, 60, 0)
+    override val colorRedMode: Color = Color(255, 90, 0)
 }
 
 fun calculateSun(

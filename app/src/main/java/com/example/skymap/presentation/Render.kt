@@ -58,8 +58,8 @@ private const val STAR_RADIUS = 2f
 private const val PLANET_RADIUS = 4f
 
 // The Sun and the Moon are about the same size in the sky
-private const val MOON_RADIUS = 20f
-private const val SUN_RADIUS = 20f
+private const val MOON_RADIUS = 12f
+private const val SUN_RADIUS = 12f
 
 // The minimal zoom at which full names of objects are displayed
 private const val NAME_CUTOFF_ZOOM = 3.0f
@@ -316,7 +316,7 @@ fun DrawScope.drawConstellations(
             val center_a = star_a.calculatePosition(position, zoom, -mapAzimuth, upsideDown)
             val center_b = star_b.calculatePosition(position, zoom, -mapAzimuth, upsideDown)
 
-            drawLine(color.copy(alpha = 0.5F), center_a, center_b);
+            drawLine(color.copy(alpha = 0.25F), center_a, center_b);
         }
 
     }
