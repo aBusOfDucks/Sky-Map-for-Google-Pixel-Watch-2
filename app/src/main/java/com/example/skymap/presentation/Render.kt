@@ -69,6 +69,9 @@ private const val NAME_CUTOFF_ZOOM = 3.0f
 private const val STRUCTURES_FONT_SIZE = 5
 private const val STRUCTURES_SHOW_ZOOM = 3
 
+private const val CONSTELLATION_FONT_SIZE = 6
+private const val CONSTELLATIONS_SHOW_ZOOM = 3
+
 open class SkyPoint(open var azimuth : Double, open var altitude : Double) {
     var r: Float = 0.0f
     private var alpha: Float = 0.0f
@@ -244,6 +247,19 @@ fun WearApp(
                         )
                     }
 
+                    if (showConstellationsText(settingsState[INDEX_CONSTELLATION])) {
+                        drawConstellationsNames(
+                            constellations,
+                            stars,
+                            zoom,
+                            settingsState,
+                            position,
+                            mapAzimuth,
+                            upsideDown,
+                            textMeasurer
+                        )
+                    }
+
                     // Planets
                     if (showPlanets(settingsState[INDEX_PLANET])) {
                         drawPlanets(planets, settingsState, zoom, position, mapAzimuth, upsideDown, textMeasurer)
@@ -323,6 +339,48 @@ fun DrawScope.drawConstellations(
 
     }
 }
+
+fun DrawScope.drawConstellationsNames(
+    constellations: ArrayList<Constellation>,
+    stars: HashMap<Int, Star>,
+    zoom: Float,
+    settingsState : SnapshotStateList<Int>,
+    position : Offset,
+    mapAzimuth: Float,
+    upsideDown: Boolean,
+    textMeasurer: TextMeasurer) {
+    for (constellation in constellations) {
+        val points = HashSet<Offset>()
+        for (line in constellation.lines) {
+            val a_id = line.first
+            val b_id = line.second
+            val star_a: Star? = findStarById(stars, a_id);
+            val star_b: Star? = findStarById(stars, b_id);
+            if (star_a == null || star_b == null) {
+                continue
+            }
+            val center_a = star_a.calculatePosition(position, zoom, -mapAzimuth, upsideDown)
+            val center_b = star_b.calculatePosition(position, zoom, -mapAzimuth, upsideDown)
+
+            points.add(center_a)
+            points.add(center_b)
+        }
+
+        val center_point = calculateCenter(points);
+
+        val text : String = if (zoom > CONSTELLATIONS_SHOW_ZOOM) constellation.full_name else constellation.short_name
+        val color = if (settingsState[INDEX_COLOR] == RED_MODE) Color.Red else Color.LightGray
+        val textLayoutResult = makeConstellationTextMeasurer(text, color, textMeasurer);
+        drawText(
+            textLayoutResult,
+            topLeft = center_point
+        )
+
+
+    }
+}
+
+
 
 fun DrawScope.drawPlanets(
     planets: ArrayList<Planet>,
@@ -500,6 +558,16 @@ fun makeStructureTextMeasurer(text: String, color: Color, textMeasurer: TextMeas
         style = TextStyle(
             color = color,
             fontSize = STRUCTURES_FONT_SIZE.sp
+        )
+    )
+}
+
+fun makeConstellationTextMeasurer(text: String, color: Color, textMeasurer: TextMeasurer) : TextLayoutResult{
+    return textMeasurer.measure(
+        text = text,
+        style = TextStyle(
+            color = color,
+            fontSize = CONSTELLATION_FONT_SIZE.sp
         )
     )
 }

@@ -1,6 +1,7 @@
 {"constellations": [
   {
-    "name": "Aquila",
+    "full_name": "Aquila",
+    "short_name": "Aql",
     "lines_cnt": 8,
     "lines": [
       {
@@ -38,7 +39,8 @@
     ]
   },
   {
-    "name": "Andromeda",
+    "full_name": "Andromeda",
+    "short_name": "And",
     "lines_cnt": 5,
     "lines": [
       {
@@ -64,7 +66,8 @@
     ]
   },
   {
-    "name": "Sculptor",
+    "full_name": "Sculptor",
+    "short_name": "Scl",
     "lines_cnt": 3,
     "lines": [
       {
@@ -82,7 +85,8 @@
     ]
   },
   {
-    "name": "Ara",
+    "full_name": "Ara",
+    "short_name": "Ara",
     "lines_cnt": 7,
     "lines": [
       {
@@ -116,7 +120,8 @@
     ]
   },
   {
-    "name": "Libra",
+    "full_name": "Libra",
+    "short_name": "Lib",
     "lines_cnt": 5,
     "lines": [
       {
@@ -142,7 +147,8 @@
     ]
   },
   {
-    "name": "Cetus",
+    "full_name": "Cetus",
+    "short_name": "Cet",
     "lines_cnt": 20,
     "lines": [
       {
@@ -228,7 +234,8 @@
     ]
   },
   {
-    "name": "Aries",
+    "full_name": "Aries",
+    "short_name": "Ari",
     "lines_cnt": 3,
     "lines": [
       {
@@ -246,7 +253,8 @@
     ]
   },
   {
-    "name": "Scutum",
+    "full_name": "Scutum",
+    "short_name": "Sct",
     "lines_cnt": 5,
     "lines": [
       {
@@ -272,7 +280,8 @@
     ]
   },
   {
-    "name": "Pyxis",
+    "full_name": "Pyxis",
+    "short_name": "Pyx",
     "lines_cnt": 2,
     "lines": [
       {
@@ -286,7 +295,8 @@
     ]
   },
   {
-    "name": "Bootes",
+    "full_name": "Bootes",
+    "short_name": "Boo",
     "lines_cnt": 9,
     "lines": [
       {
@@ -328,7 +338,8 @@
     ]
   },
   {
-    "name": "Caelum",
+    "full_name": "Caelum",
+    "short_name": "Cae",
     "lines_cnt": 2,
     "lines": [
       {
@@ -342,7 +353,8 @@
     ]
   },
   {
-    "name": "Chamaeleon",
+    "full_name": "Chamaeleon",
+    "short_name": "Cha",
     "lines_cnt": 2,
     "lines": [
       {
@@ -356,7 +368,8 @@
     ]
   },
   {
-    "name": "Cancer",
+    "full_name": "Cancer",
+    "short_name": "Cnc",
     "lines_cnt": 5,
     "lines": [
       {
@@ -382,7 +395,8 @@
     ]
   },
   {
-    "name": "Capricornus",
+    "full_name": "Capricornus",
+    "short_name": "Cap",
     "lines_cnt": 9,
     "lines": [
       {
@@ -424,7 +438,8 @@
     ]
   },
   {
-    "name": "Carina",
+    "full_name": "Carina",
+    "short_name": "Car",
     "lines_cnt": 14,
     "lines": [
       {
@@ -486,7 +501,8 @@
     ]
   },
   {
-    "name": "Cassiopeia",
+    "full_name": "Cassiopeia",
+    "short_name": "Cas",
     "lines_cnt": 4,
     "lines": [
       {
@@ -508,7 +524,8 @@
     ]
   },
   {
-    "name": "Centaurus",
+    "full_name": "Centaurus",
+    "short_name": "Cen",
     "lines_cnt": 16,
     "lines": [
       {
@@ -578,7 +595,8 @@
     ]
   },
   {
-    "name": "Cepheus",
+    "full_name": "Cepheus",
+    "short_name": "Cep",
     "lines_cnt": 6,
     "lines": [
       {
@@ -608,7 +626,8 @@
     ]
   },
   {
-    "name": "Coma",
+    "full_name": "Coma",
+    "short_name": "Com",
     "lines_cnt": 2,
     "lines": [
       {
@@ -622,7 +641,8 @@
     ]
   },
   {
-    "name": "Canes",
+    "full_name": "Canes",
+    "short_name": "CVn",
     "lines_cnt": 1,
     "lines": [{
       "id_a": 61317,
@@ -630,7 +650,8 @@
     }]
   },
   {
-    "name": "Auriga",
+    "full_name": "Auriga",
+    "short_name": "Aur",
     "lines_cnt": 6,
     "lines": [
       {
@@ -660,7 +681,8 @@
     ]
   },
   {
-    "name": "Columba",
+    "full_name": "Columba",
+    "short_name": "Col",
     "lines_cnt": 6,
     "lines": [
       {
@@ -690,7 +712,8 @@
     ]
   },
   {
-    "name": "Circinus",
+    "full_name": "Circinus",
+    "short_name": "Cir",
     "lines_cnt": 2,
     "lines": [
       {
@@ -704,7 +727,8 @@
     ]
   },
   {
-    "name": "Crater",
+    "full_name": "Crater",
+    "short_name": "Crt",
     "lines_cnt": 9,
     "lines": [
       {
@@ -746,7 +770,8 @@
     ]
   },
   {
-    "name": "Corona",
+    "full_name": "Corona",
+    "short_name": "CrA",
     "lines_cnt": 9,
     "lines": [
       {
@@ -788,7 +813,8 @@
     ]
   },
   {
-    "name": "Corona",
+    "full_name": "Corona",
+    "short_name": "CrB",
     "lines_cnt": 6,
     "lines": [
       {
@@ -818,7 +844,8 @@
     ]
   },
   {
-    "name": "Corvus",
+    "full_name": "Corvus",
+    "short_name": "Crv",
     "lines_cnt": 6,
     "lines": [
       {
@@ -848,7 +875,8 @@
     ]
   },
   {
-    "name": "Crux",
+    "full_name": "Crux",
+    "short_name": "Cru",
     "lines_cnt": 2,
     "lines": [
       {
@@ -862,7 +890,8 @@
     ]
   },
   {
-    "name": "Cygnus",
+    "full_name": "Cygnus",
+    "short_name": "Cyg",
     "lines_cnt": 9,
     "lines": [
       {
@@ -904,7 +933,8 @@
     ]
   },
   {
-    "name": "Delphinus",
+    "full_name": "Delphinus",
+    "short_name": "Del",
     "lines_cnt": 5,
     "lines": [
       {
@@ -930,7 +960,8 @@
     ]
   },
   {
-    "name": "Dorado",
+    "full_name": "Dorado",
+    "short_name": "Dor",
     "lines_cnt": 5,
     "lines": [
       {
@@ -956,7 +987,8 @@
     ]
   },
   {
-    "name": "Draco",
+    "full_name": "Draco",
+    "short_name": "Dra",
     "lines_cnt": 15,
     "lines": [
       {
@@ -1022,7 +1054,8 @@
     ]
   },
   {
-    "name": "Norma",
+    "full_name": "Norma",
+    "short_name": "Nor",
     "lines_cnt": 5,
     "lines": [
       {
@@ -1048,7 +1081,8 @@
     ]
   },
   {
-    "name": "Eridanus",
+    "full_name": "Eridanus",
+    "short_name": "Eri",
     "lines_cnt": 27,
     "lines": [
       {
@@ -1162,7 +1196,8 @@
     ]
   },
   {
-    "name": "Sagitta",
+    "full_name": "Sagitta",
+    "short_name": "Sge",
     "lines_cnt": 4,
     "lines": [
       {
@@ -1184,7 +1219,8 @@
     ]
   },
   {
-    "name": "Fornax",
+    "full_name": "Fornax",
+    "short_name": "For",
     "lines_cnt": 1,
     "lines": [{
       "id_a": 13147,
@@ -1192,7 +1228,8 @@
     }]
   },
   {
-    "name": "Gemini",
+    "full_name": "Gemini",
+    "short_name": "Gem",
     "lines_cnt": 16,
     "lines": [
       {
@@ -1262,7 +1299,8 @@
     ]
   },
   {
-    "name": "Camelopardalis",
+    "full_name": "Camelopardalis",
+    "short_name": "Cam",
     "lines_cnt": 5,
     "lines": [
       {
@@ -1288,7 +1326,8 @@
     ]
   },
   {
-    "name": "Canis",
+    "full_name": "Canis",
+    "short_name": "CMa",
     "lines_cnt": 17,
     "lines": [
       {
@@ -1362,7 +1401,8 @@
     ]
   },
   {
-    "name": "Ursa",
+    "full_name": "Ursa",
+    "short_name": "UMa",
     "lines_cnt": 19,
     "lines": [
       {
@@ -1444,7 +1484,8 @@
     ]
   },
   {
-    "name": "Grus",
+    "full_name": "Grus",
+    "short_name": "Gru",
     "lines_cnt": 9,
     "lines": [
       {
@@ -1486,7 +1527,8 @@
     ]
   },
   {
-    "name": "Hercules",
+    "full_name": "Hercules",
+    "short_name": "Her",
     "lines_cnt": 18,
     "lines": [
       {
@@ -1564,7 +1606,8 @@
     ]
   },
   {
-    "name": "Horologium",
+    "full_name": "Horologium",
+    "short_name": "Hor",
     "lines_cnt": 2,
     "lines": [
       {
@@ -1578,7 +1621,8 @@
     ]
   },
   {
-    "name": "Hydra",
+    "full_name": "Hydra",
+    "short_name": "Hya",
     "lines_cnt": 18,
     "lines": [
       {
@@ -1656,7 +1700,8 @@
     ]
   },
   {
-    "name": "Hydrus",
+    "full_name": "Hydrus",
+    "short_name": "Hyi",
     "lines_cnt": 4,
     "lines": [
       {
@@ -1678,7 +1723,8 @@
     ]
   },
   {
-    "name": "Indus",
+    "full_name": "Indus",
+    "short_name": "Ind",
     "lines_cnt": 3,
     "lines": [
       {
@@ -1696,7 +1742,8 @@
     ]
   },
   {
-    "name": "Lacerta",
+    "full_name": "Lacerta",
+    "short_name": "Lac",
     "lines_cnt": 6,
     "lines": [
       {
@@ -1726,7 +1773,8 @@
     ]
   },
   {
-    "name": "Monoceros",
+    "full_name": "Monoceros",
+    "short_name": "Mon",
     "lines_cnt": 6,
     "lines": [
       {
@@ -1756,7 +1804,8 @@
     ]
   },
   {
-    "name": "Lepus",
+    "full_name": "Lepus",
+    "short_name": "Lep",
     "lines_cnt": 14,
     "lines": [
       {
@@ -1818,7 +1867,8 @@
     ]
   },
   {
-    "name": "Leo",
+    "full_name": "Leo",
+    "short_name": "Leo",
     "lines_cnt": 10,
     "lines": [
       {
@@ -1864,7 +1914,8 @@
     ]
   },
   {
-    "name": "Lupus",
+    "full_name": "Lupus",
+    "short_name": "Lup",
     "lines_cnt": 13,
     "lines": [
       {
@@ -1922,7 +1973,8 @@
     ]
   },
   {
-    "name": "Lynx",
+    "full_name": "Lynx",
+    "short_name": "Lyn",
     "lines_cnt": 7,
     "lines": [
       {
@@ -1956,7 +2008,8 @@
     ]
   },
   {
-    "name": "Lyra",
+    "full_name": "Lyra",
+    "short_name": "Lyr",
     "lines_cnt": 5,
     "lines": [
       {
@@ -1982,7 +2035,8 @@
     ]
   },
   {
-    "name": "Antlia",
+    "full_name": "Antlia",
+    "short_name": "Ant",
     "lines_cnt": 1,
     "lines": [{
       "id_a": 51172,
@@ -1990,7 +2044,8 @@
     }]
   },
   {
-    "name": "Microscopium",
+    "full_name": "Microscopium",
+    "short_name": "Mic",
     "lines_cnt": 2,
     "lines": [
       {
@@ -2004,7 +2059,8 @@
     ]
   },
   {
-    "name": "Musca",
+    "full_name": "Musca",
+    "short_name": "Mus",
     "lines_cnt": 4,
     "lines": [
       {
@@ -2026,7 +2082,8 @@
     ]
   },
   {
-    "name": "Octans",
+    "full_name": "Octans",
+    "short_name": "Oct",
     "lines_cnt": 3,
     "lines": [
       {
@@ -2044,7 +2101,8 @@
     ]
   },
   {
-    "name": "Apus",
+    "full_name": "Apus",
+    "short_name": "Aps",
     "lines_cnt": 2,
     "lines": [
       {
@@ -2058,7 +2116,8 @@
     ]
   },
   {
-    "name": "Ophiuchus",
+    "full_name": "Ophiuchus",
+    "short_name": "Oph",
     "lines_cnt": 7,
     "lines": [
       {
@@ -2092,7 +2151,8 @@
     ]
   },
   {
-    "name": "Orion",
+    "full_name": "Orion",
+    "short_name": "Ori",
     "lines_cnt": 23,
     "lines": [
       {
@@ -2190,7 +2250,8 @@
     ]
   },
   {
-    "name": "Pavo",
+    "full_name": "Pavo",
+    "short_name": "Pav",
     "lines_cnt": 13,
     "lines": [
       {
@@ -2248,7 +2309,8 @@
     ]
   },
   {
-    "name": "Pegasus",
+    "full_name": "Pegasus",
+    "short_name": "Peg",
     "lines_cnt": 14,
     "lines": [
       {
@@ -2310,7 +2372,8 @@
     ]
   },
   {
-    "name": "Pictor",
+    "full_name": "Pictor",
+    "short_name": "Pic",
     "lines_cnt": 2,
     "lines": [
       {
@@ -2324,7 +2387,8 @@
     ]
   },
   {
-    "name": "Perseus",
+    "full_name": "Perseus",
+    "short_name": "Per",
     "lines_cnt": 10,
     "lines": [
       {
@@ -2370,7 +2434,8 @@
     ]
   },
   {
-    "name": "Equuleus",
+    "full_name": "Equuleus",
+    "short_name": "Equ",
     "lines_cnt": 4,
     "lines": [
       {
@@ -2392,7 +2457,8 @@
     ]
   },
   {
-    "name": "Canis",
+    "full_name": "Canis",
+    "short_name": "CMi",
     "lines_cnt": 1,
     "lines": [{
       "id_a": 37279,
@@ -2400,7 +2466,8 @@
     }]
   },
   {
-    "name": "Leo",
+    "full_name": "Leo",
+    "short_name": "LMi",
     "lines_cnt": 4,
     "lines": [
       {
@@ -2422,7 +2489,8 @@
     ]
   },
   {
-    "name": "Vulpecula",
+    "full_name": "Vulpecula",
+    "short_name": "Vul",
     "lines_cnt": 1,
     "lines": [{
       "id_a": 95771,
@@ -2430,7 +2498,8 @@
     }]
   },
   {
-    "name": "Ursa",
+    "full_name": "Ursa",
+    "short_name": "UMi",
     "lines_cnt": 7,
     "lines": [
       {
@@ -2464,7 +2533,8 @@
     ]
   },
   {
-    "name": "Phoenix",
+    "full_name": "Phoenix",
+    "short_name": "Phe",
     "lines_cnt": 11,
     "lines": [
       {
@@ -2514,7 +2584,8 @@
     ]
   },
   {
-    "name": "Pisces",
+    "full_name": "Pisces",
+    "short_name": "Psc",
     "lines_cnt": 19,
     "lines": [
       {
@@ -2596,7 +2667,8 @@
     ]
   },
   {
-    "name": "Piscis",
+    "full_name": "Piscis",
+    "short_name": "PsA",
     "lines_cnt": 6,
     "lines": [
       {
@@ -2626,7 +2698,8 @@
     ]
   },
   {
-    "name": "Volans",
+    "full_name": "Volans",
+    "short_name": "Vol",
     "lines_cnt": 7,
     "lines": [
       {
@@ -2660,7 +2733,8 @@
     ]
   },
   {
-    "name": "Puppis",
+    "full_name": "Puppis",
+    "short_name": "Pup",
     "lines_cnt": 7,
     "lines": [
       {
@@ -2694,7 +2768,8 @@
     ]
   },
   {
-    "name": "Reticulum",
+    "full_name": "Reticulum",
+    "short_name": "Ret",
     "lines_cnt": 4,
     "lines": [
       {
@@ -2716,7 +2791,8 @@
     ]
   },
   {
-    "name": "Sagittarius",
+    "full_name": "Sagittarius",
+    "short_name": "Sgr",
     "lines_cnt": 24,
     "lines": [
       {
@@ -2818,7 +2894,8 @@
     ]
   },
   {
-    "name": "Scorpius",
+    "full_name": "Scorpius",
+    "short_name": "Sco",
     "lines_cnt": 12,
     "lines": [
       {
@@ -2872,7 +2949,8 @@
     ]
   },
   {
-    "name": "Serpens",
+    "full_name": "Serpens",
+    "short_name": "Ser",
     "lines_cnt": 11,
     "lines": [
       {
@@ -2922,7 +3000,8 @@
     ]
   },
   {
-    "name": "Sextans",
+    "full_name": "Sextans",
+    "short_name": "Sex",
     "lines_cnt": 1,
     "lines": [{
       "id_a": 51437,
@@ -2930,7 +3009,8 @@
     }]
   },
   {
-    "name": "Mensa",
+    "full_name": "Mensa",
+    "short_name": "Men",
     "lines_cnt": 1,
     "lines": [{
       "id_a": 25918,
@@ -2938,7 +3018,8 @@
     }]
   },
   {
-    "name": "Taurus",
+    "full_name": "Taurus",
+    "short_name": "Tau",
     "lines_cnt": 12,
     "lines": [
       {
@@ -2992,7 +3073,8 @@
     ]
   },
   {
-    "name": "Telescopium",
+    "full_name": "Telescopium",
+    "short_name": "Tel",
     "lines_cnt": 1,
     "lines": [{
       "id_a": 90568,
@@ -3000,7 +3082,8 @@
     }]
   },
   {
-    "name": "Tucana",
+    "full_name": "Tucana",
+    "short_name": "Tuc",
     "lines_cnt": 3,
     "lines": [
       {
@@ -3018,7 +3101,8 @@
     ]
   },
   {
-    "name": "Triangulum",
+    "full_name": "Triangulum",
+    "short_name": "Tri",
     "lines_cnt": 3,
     "lines": [
       {
@@ -3036,7 +3120,8 @@
     ]
   },
   {
-    "name": "Triangulum",
+    "full_name": "Triangulum",
+    "short_name": "TrA",
     "lines_cnt": 3,
     "lines": [
       {
@@ -3054,7 +3139,8 @@
     ]
   },
   {
-    "name": "Aquarius",
+    "full_name": "Aquarius",
+    "short_name": "Aqr",
     "lines_cnt": 14,
     "lines": [
       {
@@ -3116,7 +3202,8 @@
     ]
   },
   {
-    "name": "Virgo",
+    "full_name": "Virgo",
+    "short_name": "Vir",
     "lines_cnt": 12,
     "lines": [
       {
@@ -3170,7 +3257,8 @@
     ]
   },
   {
-    "name": "Vela",
+    "full_name": "Vela",
+    "short_name": "Vel",
     "lines_cnt": 10,
     "lines": [
       {
