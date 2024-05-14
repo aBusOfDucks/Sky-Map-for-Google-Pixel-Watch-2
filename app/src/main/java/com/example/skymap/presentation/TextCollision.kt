@@ -33,8 +33,18 @@ private fun rectFromCenter(center: Offset, width: Float, height: Float) : RectF 
 fun placePlanetText(planetPos : Offset, width : Float, height : Float, takenRectList: ArrayList<RectF>) : Offset {
     val halfWidth = 1f + width / 2
     val halfHeight = 2f + height / 2
-    for (dx in arrayOf(0f, halfWidth, -halfWidth, 3 * halfWidth, -3 * halfWidth)) {
-        for (dy in arrayOf(halfHeight, - halfHeight, 3 * halfHeight, -3 * halfHeight)) {
+    val grid = arrayOf(
+        Offset(0f,1f),
+        Offset(1f,1f),
+        Offset(-1f,1f),
+        Offset(0f,-1f),
+        Offset(1f,-1f),
+        Offset(-1f,-1f),
+    )
+    for (d in arrayOf(1f, 1.5f, 2f, 2.5f, 3f)) {
+        for (o in grid) {
+            val dx = o.x * d * halfWidth
+            val dy = o.y * d *halfHeight
             val rect = rectFromCenter(planetPos + Offset(dx,dy), width, height)
             if (!collisionRectList(
                     rect

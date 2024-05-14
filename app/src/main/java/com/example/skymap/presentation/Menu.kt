@@ -256,9 +256,9 @@ fun Menu(menuState: SnapshotStateList<Int>, menuExit: () -> Unit) {
             item {
                 IconChangingButton(
                     icons = arrayOf(
-                        R.drawable.planet_no,
-                        R.drawable.planet,
-                        R.drawable.planet_text
+                        R.drawable.galaxy_no,
+                        R.drawable.galaxy,
+                        R.drawable.galaxy_text
                     ),
                     startState = menuState[INDEX_DEEP_SKY],
                     onClick = { i -> menuState[INDEX_DEEP_SKY] = i },
