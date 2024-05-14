@@ -37,7 +37,7 @@ import com.google.gson.JsonParser
 
 private const val LOCK_ANGLE = 1f
 
-const val MAX_ZOOM = 5f
+const val MAX_ZOOM = 10f
 
 const val AZIMUTH_INERTIA = 0.5f
 
@@ -334,7 +334,7 @@ class MainActivity : ComponentActivity() {
     override fun onGenericMotionEvent(event: MotionEvent?): Boolean {
         if (event?.action == MotionEvent.ACTION_SCROLL && RotaryEncoderHelper.isFromRotaryEncoder(event)) {
             val delta = RotaryEncoderHelper.getRotaryAxisValue(event)
-            zoom.v -= delta * 0.5f
+            zoom.v -= delta * 0.7f
             zoom.v = max(1f, min(zoom.v, MAX_ZOOM))
             update()
             return true

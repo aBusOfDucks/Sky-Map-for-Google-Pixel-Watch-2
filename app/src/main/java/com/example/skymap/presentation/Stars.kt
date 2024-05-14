@@ -42,8 +42,8 @@ open class Star(private val mag : Double, azimuth: Double, altitude: Double, id:
     }
 }
 
-private const val BRIGHTNESS_INTERSECTION_POINT = 9.1f
-private const val INVERSE_SLOPE = BRIGHTNESS_INTERSECTION_POINT * 4f - 4f
+private const val BRIGHTNESS_INTERSECTION_POINT = 15f
+private const val SLOPE =  1 / (BRIGHTNESS_INTERSECTION_POINT * 4f - 4f)
 
 private fun unscaledStarAlpha(brightness: Float, zoom: Float, mag : Float) : Float {
     /*
@@ -56,12 +56,12 @@ private fun unscaledStarAlpha(brightness: Float, zoom: Float, mag : Float) : Flo
     6. If the effective magnitude is constant, then alpha is a linear function of zoom.
      */
     val effectiveMagnitude = mag + brightness * 0.5f
-    return 1f + (zoom - BRIGHTNESS_INTERSECTION_POINT) * effectiveMagnitude / INVERSE_SLOPE
+    return 1f + (zoom - BRIGHTNESS_INTERSECTION_POINT) * effectiveMagnitude * SLOPE
 }
 
 /** Returns the maximum alpha value that any star can have for this brightness setting */
 fun maxStarAlpha(brightness: Float) : Float {
-    return unscaledStarAlpha(brightness, 5f, 0f)
+    return unscaledStarAlpha(brightness, MAX_ZOOM, 0f)
 }
 
 fun calculateStars(latitude: Double, longitude: Double, starsArray: com.google.gson.JsonArray?): HashMap<Int,Star> {
