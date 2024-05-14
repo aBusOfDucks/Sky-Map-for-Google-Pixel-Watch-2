@@ -61,7 +61,7 @@ class Moon(
     }
 }
 
-private fun calculatePosition(latitude : Double, longitude : Double) : GeocentricEclipticCoordinates {
+private fun calculateMoonPosition(latitude : Double, longitude : Double) : GeocentricEclipticCoordinates {
     val time = zonedDateTimeNow()
     val converter = Converter(latitude, longitude, time)
 
@@ -111,8 +111,8 @@ private fun calculatePosition(latitude : Double, longitude : Double) : Geocentri
 }
 
 fun calculateMoon(latitude : Double, longitude : Double) : Moon {
-    val moonGeocentricCoordinates = GeocentricEclipticCoordinates(latitude, longitude)
-    val moonEquatorialCoordinates = eclipticToEquatorial(moonGeocentricCoordinates)
+    val moonEclipicCoordinates = calculateMoonPosition(latitude, longitude)
+    val moonEquatorialCoordinates = eclipticToEquatorial(moonEclipicCoordinates)
     val converter = Converter(latitude, longitude, zonedDateTimeNow())
     val horizontalPositions: GeocentricHorizontalCoordinates = converter.equatorialToHorizontal(moonEquatorialCoordinates)
 
