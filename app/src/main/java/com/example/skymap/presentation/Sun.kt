@@ -5,6 +5,7 @@ import getPlanetObjects
 import androidx.compose.ui.graphics.Color
 import calculateGeocentricPositions
 import com.google.gson.JsonArray
+import getJulianDate
 
 class Sun(azimuth : Double, altitude : Double) : SkyPoint(azimuth,altitude) {
     override val color : Color = Color(255,255,0)
@@ -22,7 +23,7 @@ fun calculateSun(
     val zonedDateTime = zonedDateTimeNow()
 
     val converter = Converter(latitude, longitude, zonedDateTime)
-    val JED = converter.getJulianDate()
+    val JED = getJulianDate()
 
     val earthPositions: HeliocentricEclipticCoordinates = earth.calculateHeliocentricPositions(JED)
     val heliocentricSunPositions = HeliocentricEclipticCoordinates(0.0, 0.0, 0.0)

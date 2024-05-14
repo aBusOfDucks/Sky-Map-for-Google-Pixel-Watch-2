@@ -3,10 +3,12 @@ package com.example.skymap.presentation
 import Converter
 import androidx.compose.ui.graphics.Color
 import eclipticToEquatorial
+import getJulianDate
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.asin
 import kotlin.math.cos
+import kotlin.math.floor
 import kotlin.math.sin
 
 private const val EPS = 1e-4
@@ -63,9 +65,8 @@ class Moon(
 
 private fun calculateMoonPosition(latitude : Double, longitude : Double) : GeocentricEclipticCoordinates {
     val time = zonedDateTimeNow()
-    val converter = Converter(latitude, longitude, time)
 
-    val JED = converter.getJulianDate()
+    val JED = getJulianDate()
     val deltaT = JED - J2000 // days
 
     var lambda = lambda0 + n1 * deltaT // degrees
@@ -110,13 +111,52 @@ private fun calculateMoonPosition(latitude : Double, longitude : Double) : Geoce
     return GeocentricEclipticCoordinates(lambda, beta)
 }
 
+private fun calculateNewMoonDate(N: Int) : Double {
+    return 5.597661 + 29.5305888610 * N + 100.026 * N * N * 1e-12
+}
+
+private fun calculatePhase() : Double {
+    val synodicPeriod = 29.531
+    val today = getJulianDate() - J2000
+    val synodicMonths = today / synodicPeriod
+
+    var N = floor(synodicMonths).toInt()
+
+    // calculates this month's new moon
+    var lastNewMoon = calculateNewMoonDate(N)
+
+    // if new moon has not appeared this month yet, we calculate last month new moon date
+    if (today < lastNewMoon) {
+        N--
+        lastNewMoon = calculateNewMoonDate(N)
+    }
+
+    // the date of the next new moon
+    val nextNewMoon = calculateNewMoonDate(N + 1)
+
+    // this is how many days passed from last new moon
+    val daysFromNewMoon = today - lastNewMoon
+
+    // % of moon phase from
+    val cyclePercent = daysFromNewMoon / synodicPeriod
+
+    // from 0 to 2PI
+    var phase = 2 * PI * cyclePercent
+    if (phase > PI) {
+        phase -= 2 * PI
+    }
+
+    return phase
+}
+
 fun calculateMoon(latitude : Double, longitude : Double) : Moon {
-    val moonEclipicCoordinates = calculateMoonPosition(latitude, longitude)
-    val moonEquatorialCoordinates = eclipticToEquatorial(moonEclipicCoordinates)
+    val moonEclipticCoordinates = calculateMoonPosition(latitude, longitude)
+    val moonEquatorialCoordinates = eclipticToEquatorial(moonEclipticCoordinates)
     val converter = Converter(latitude, longitude, zonedDateTimeNow())
     val horizontalPositions: GeocentricHorizontalCoordinates = converter.equatorialToHorizontal(moonEquatorialCoordinates)
 
-    var moon = Moon(PI.toFloat() / 4, 0f, horizontalPositions.azimuth, horizontalPositions.altitude)
+    val phase = calculatePhase()
 
+    val moon = Moon(phase.toFloat(), 0f, horizontalPositions.azimuth, horizontalPositions.altitude)
     return moon
 }

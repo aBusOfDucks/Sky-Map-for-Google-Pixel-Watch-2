@@ -3,6 +3,7 @@ package com.example.skymap.presentation
 import Converter
 import androidx.compose.ui.graphics.Color
 import calculateGeocentricPositions
+import getJulianDate
 import getPlanetObjects
 import kotlin.math.abs
 import kotlin.math.cos
@@ -45,7 +46,7 @@ fun calculatePlanets(
     val zonedDateTime = zonedDateTimeNow()
 
     val converter = Converter(latitude, longitude, zonedDateTime)
-    val JED = converter.getJulianDate()
+    val JED = getJulianDate()
 
     val earthPositions: HeliocentricEclipticCoordinates = earth.calculateHeliocentricPositions(JED)
 

@@ -7,6 +7,7 @@ import com.example.skymap.presentation.HeliocentricEclipticCoordinates
 import com.example.skymap.presentation.Planet
 import com.example.skymap.presentation.toDegrees
 import com.example.skymap.presentation.toRadians
+import com.example.skymap.presentation.zonedDateTimeNow
 import java.time.Duration
 import java.time.LocalTime
 import java.time.ZonedDateTime
@@ -17,6 +18,46 @@ import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.sin
 import kotlin.math.sqrt
+
+
+/**
+ * Function calculates Julian Date at a given Gregorian Day
+ * @param year - year in a Gregorian calendar [Int]
+ * @param month - month in a Gregorian calendar [Int]
+ * @param day - day in a Gregorian calendar [Int]
+ * @return Julian Date Number at a given day [Int]
+ */
+private fun calculateJDN(year: Int, month: Int, day: Int): Int {
+    val a = (month - 14) / 12
+    val y = year + 4800 + a
+    val m = month - 12 * a - 2
+    return (1461 * y) / 4 + (367 * m) / 12 - (3 * (y + 100) / 100) / 4 + day - 32075
+}
+
+/**
+ * Function calculates Julian Date at a current time.
+ * @return Julian Date at a given time [Double]
+ */
+fun getJulianDate(): Double {
+    val time = zonedDateTimeNow()
+
+    var year = time.year
+    var month = time.month.value
+    val day = time.dayOfMonth
+
+    // Julian Date Number
+    val JDN = calculateJDN(year, month, day)
+
+    val hour = time.hour.toDouble()
+    val minute = time.minute.toDouble()
+    val second = time.second.toDouble()
+
+    // Julian Date
+    var JD = JDN.toDouble() + (hour - 12.0) / 24
+    JD += minute / 1440
+    JD += second / 86400
+    return JD
+}
 
 class Converter(
     latitudeDegree: Double, longitudeDegree: Double, zonedTime: ZonedDateTime
@@ -36,43 +77,6 @@ class Converter(
         latitude = toRadians(latitudeDegree)
         longitude = toRadians(longitudeDegree)
         time = zonedTime
-    }
-
-    /**
-     * Function calculates Julian Date at a given Gregorian Day
-     * @param year - year in a Gregorian calendar [Int]
-     * @param month - month in a Gregorian calendar [Int]
-     * @param day - day in a Gregorian calendar [Int]
-     * @return Julian Date Number at a given day [Int]
-     */
-    private fun calculateJDN(year: Int, month: Int, day: Int): Int {
-        val a = (month - 14) / 12
-        val y = year + 4800 + a
-        val m = month - 12 * a - 2
-        return (1461 * y) / 4 + (367 * m) / 12 - (3 * (y + 100) / 100) / 4 + day - 32075
-    }
-
-    /**
-     * Function calculates Julian Date at a current time.
-     * @return Julian Date at a given time [Double]
-     */
-    fun getJulianDate(): Double {
-        var year = time.year
-        var month = time.month.value
-        val day = time.dayOfMonth
-
-        // Julian Date Number
-        val JDN = calculateJDN(year, month, day)
-
-        val hour = time.hour.toDouble()
-        val minute = time.minute.toDouble()
-        val second = time.second.toDouble()
-
-        // Julian Date
-        var JD = JDN.toDouble() + (hour - 12.0) / 24
-        JD += minute / 1440
-        JD += second / 86400
-        return JD
     }
 
     /**
