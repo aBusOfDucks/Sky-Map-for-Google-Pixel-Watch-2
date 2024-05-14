@@ -66,8 +66,9 @@ private const val SUN_RADIUS = 12f
 // The minimal zoom at which full names of objects are displayed
 private const val NAME_CUTOFF_ZOOM = 3.0f
 
-private const val STRUCTURES_FONT_SIZE = 5
+private const val STRUCTURES_FONT_SIZE = 7
 private const val STRUCTURES_SHOW_ZOOM = 3
+private const val STRUCTURES_SHOW_TEXT_ZOOM = 4.8
 
 private const val CONSTELLATION_FONT_SIZE = 6
 private const val CONSTELLATIONS_SHOW_ZOOM = 3
@@ -544,10 +545,12 @@ fun DrawScope.drawSkyStructures(
             val nameMeasured = makeStructureTextMeasurer(structure.name, color, textMeasurer)
             val xOffset = (symbolMeasured.size.width.toFloat() - nameMeasured.size.width.toFloat()) * 0.5f
             val yOffset = symbolMeasured.size.height.toFloat() * 0.8f
-            drawText(
-                nameMeasured,
-                topLeft = center + Offset(xOffset, yOffset)
-            )
+            if (zoom >= STRUCTURES_SHOW_TEXT_ZOOM) {
+                drawText(
+                    nameMeasured,
+                    topLeft = center + Offset(xOffset, yOffset)
+                )
+            }
         }
     }
 }
