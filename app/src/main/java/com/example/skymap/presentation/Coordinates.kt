@@ -187,7 +187,7 @@ fun getPlanetObjects(planetsArray: com.google.gson.JsonArray?) : ArrayList<Plane
     return planetsObjects
 }
 
-private fun eclipticToEquatorial(ecliptic: GeocentricEclipticCoordinates)
+fun eclipticToEquatorial(ecliptic: GeocentricEclipticCoordinates)
         : GeocentricEquatorialCoordinates {
 
     val a = sin(ecliptic.latitude) * cos(ECLIPTIC_ANGLE)

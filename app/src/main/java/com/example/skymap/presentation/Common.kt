@@ -7,6 +7,7 @@ import java.time.ZonedDateTime
 import kotlin.math.PI
 
 const val ECLIPTIC_ANGLE = 0.40910517667
+const val J2000 = 2451545.0
 
 data class HeliocentricOrbitalCoordinates(val x: Double, val y: Double, val z: Double)
 

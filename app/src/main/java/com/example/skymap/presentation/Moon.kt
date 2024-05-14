@@ -1,11 +1,24 @@
 package com.example.skymap.presentation
 
+import Converter
 import androidx.compose.ui.graphics.Color
+import eclipticToEquatorial
 import kotlin.math.PI
 import kotlin.math.abs
+import kotlin.math.asin
 import kotlin.math.cos
+import kotlin.math.sin
 
 private const val EPS = 1e-4
+
+private const val e = 0.054881 // rad
+private const val n1 = 13.17639646 // deg / day
+private const val n2 = 13.06499295 // deg / day
+private const val n3 = 13.22935027 // deg / day
+private const val lambda0 = 218.322 // deg
+private const val M0 = 134.916 // deg
+private const val F0 = 93.284 // deg
+private const val i = 5.161 // deg
 
 val MOON_DARK_COLOR = Color(40, 40, 40)
 
@@ -48,7 +61,62 @@ class Moon(
     }
 }
 
-fun calculateMoon() : Moon {
-    //TODO: Add Moon calculation here
-    return Moon(PI.toFloat() / 4, 0f, 0.0, 0.5)
+private fun calculatePosition(latitude : Double, longitude : Double) : GeocentricEclipticCoordinates {
+    val time = zonedDateTimeNow()
+    val converter = Converter(latitude, longitude, time)
+
+    val JED = converter.getJulianDate()
+    val deltaT = JED - J2000 // days
+
+    var lambda = lambda0 + n1 * deltaT // degrees
+    lambda %= 360
+    lambda = toRadians(lambda)
+
+    var M = M0 + n2 * deltaT // degrees
+    M %= 360
+    M = toRadians(M)
+
+    var F1 = F0 + n3 * deltaT // degrees
+    F1 %= 360
+    F1 = toRadians(F1)
+
+    var lambdaS = 280.459 + 0.98564736 * deltaT // degrees
+    lambdaS %= 360
+    lambdaS = toRadians(lambdaS)
+
+    val D = lambda - lambdaS // rad
+
+    // radians
+    val q1 = 2 * e * sin(M) + 1.430 * e * e * sin (2 * M)
+    val q2 = 0.422 * e * sin(2 * D - M)
+    val q3 = 0.211 * e * (sin(2 * D) - 0.066 * sin(D))
+
+    var MS = 357.529 + 0.98560028 * deltaT // degrees
+    MS %= 360
+    MS = toRadians(MS)
+
+    val q4 = - 0.051 * e * sin(MS)
+    val q5 = - 0.038 * e * sin(2 * F1)
+
+    // ecliptic longitude
+    lambda += (q1 + q2 + q3 + q4 + q5) // radians
+
+    // mean argument of latitude
+    val F = F1 + q1 + q2 + q3 + q4 + q5 // radians
+
+    val sinBeta = sin(toRadians(i)) * sin(F)
+    val beta = asin(sinBeta)
+
+    return GeocentricEclipticCoordinates(lambda, beta)
+}
+
+fun calculateMoon(latitude : Double, longitude : Double) : Moon {
+    val moonGeocentricCoordinates = GeocentricEclipticCoordinates(latitude, longitude)
+    val moonEquatorialCoordinates = eclipticToEquatorial(moonGeocentricCoordinates)
+    val converter = Converter(latitude, longitude, zonedDateTimeNow())
+    val horizontalPositions: GeocentricHorizontalCoordinates = converter.equatorialToHorizontal(moonEquatorialCoordinates)
+
+    var moon = Moon(PI.toFloat() / 4, 0f, horizontalPositions.azimuth, horizontalPositions.altitude)
+
+    return moon
 }
