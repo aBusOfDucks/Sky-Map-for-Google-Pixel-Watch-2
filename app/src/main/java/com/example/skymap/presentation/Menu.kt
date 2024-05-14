@@ -26,10 +26,15 @@ import kotlin.math.abs
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.EaseOutBounce
 import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.lazy.grid.LazyHorizontalGrid
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.snapshots.SnapshotStateList
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
@@ -41,6 +46,7 @@ const val INDEX_PLANET = 1
 const val INDEX_BRIGHTNESS = 2
 const val INDEX_COLOR = 3
 const val INDEX_SUN_MOON = 4
+const val INDEX_DEEP_SKY = 5
 
 const val PLANET_SHOW = 0
 const val PLANET_SHOW_NO_TEXT = 1
@@ -52,6 +58,10 @@ const val FLAG_MOON = 2
 const val CONSTELLATIONS_HIDE = 0
 const val CONSTELLATIONS_SHOW_NO_TEXT = 1
 const val CONSTELLATIONS_SHOW = 2
+
+const val DEEP_SKY_HIDE = 0
+const val DEEP_SKY_SHOW = 1
+const val DEEP_SKY_SHOW_TEXT = 2
 
 const val WHITE_MODE = 0
 const val RED_MODE = 1
@@ -114,7 +124,7 @@ fun Menu(menuState: SnapshotStateList<Int>, menuExit: () -> Unit) {
         menuExit()
     }
     val coroutineScope = rememberCoroutineScope()
-    Box(modifier = Modifier
+    Column(modifier = Modifier
         .fillMaxSize()
         .draggable(
             state = rememberDraggableState(onDelta = { d ->
@@ -143,19 +153,20 @@ fun Menu(menuState: SnapshotStateList<Int>, menuExit: () -> Unit) {
                 }
             }
         )
-        .offset(Dp(0f), Dp(offsetY.value))
+        .offset(Dp(0f), Dp(offsetY.value)),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
     )
     {
         LazyHorizontalGrid(
-            rows = GridCells.Fixed(3),
+            rows = GridCells.Fixed(2),
             modifier = Modifier
-                .fillMaxSize()
-                .padding(all = Dp(5.0f))
+                .fillMaxWidth()
+                .fillMaxHeight(0.65f)
+                .padding(all = Dp(5.0f)),
+            horizontalArrangement = Arrangement.Center
         )
         {
-            item {
-                // This is an empty corner
-            }
             item {
                 IconChangingButton(
                     icons = arrayOf(
@@ -167,9 +178,6 @@ fun Menu(menuState: SnapshotStateList<Int>, menuExit: () -> Unit) {
                     onClick = { i -> menuState[INDEX_CONSTELLATION] = i },
                     padding = 2.5f
                 )
-            }
-            item {
-                // This is an empty corner
             }
             item {
                 IconChangingButton(
@@ -233,9 +241,6 @@ fun Menu(menuState: SnapshotStateList<Int>, menuExit: () -> Unit) {
                 }
             }
             item {
-                // This is an empty corner
-            }
-            item {
                 IconChangingButton(
                     icons = arrayOf(
                         R.drawable.no_sun_moon,
@@ -249,7 +254,16 @@ fun Menu(menuState: SnapshotStateList<Int>, menuExit: () -> Unit) {
                 )
             }
             item {
-                // This is an empty corner
+                IconChangingButton(
+                    icons = arrayOf(
+                        R.drawable.planet_no,
+                        R.drawable.planet,
+                        R.drawable.planet_text
+                    ),
+                    startState = menuState[INDEX_DEEP_SKY],
+                    onClick = { i -> menuState[INDEX_DEEP_SKY] = i },
+                    padding = 5.0f
+                )
             }
         }
     }

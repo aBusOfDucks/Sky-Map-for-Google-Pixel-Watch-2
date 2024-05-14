@@ -155,7 +155,8 @@ fun WearApp(
             PLANET_SHOW,
             0,
             WHITE_MODE,
-            FLAG_MOON or FLAG_SUN
+            FLAG_MOON or FLAG_SUN,
+            DEEP_SKY_HIDE
         )
     }
 
@@ -229,7 +230,7 @@ fun WearApp(
                     drawCircle(color = backgroundColor, radius = WATCHFACE_RADIUS)
 
                     // Sky structures (galaxies, nebulae etc.)
-                    if (zoom >= STRUCTURES_SHOW_ZOOM) {
+                    if (zoom >= STRUCTURES_SHOW_ZOOM && settingsState[INDEX_DEEP_SKY] != DEEP_SKY_HIDE) {
                         drawSkyStructures(skyStructures, zoom, settingsState, position, mapAzimuth, upsideDown, textMeasurer)
                     }
 
@@ -530,7 +531,7 @@ fun DrawScope.drawSkyStructures(
     textMeasurer: TextMeasurer) {
     for(structure in skyStructures)
     {
-        // Current;y passing dummy values to arguments that are ignored in the overriden function
+        // Currently passing dummy values to arguments that are ignored in the overriden function
         val color = structure.getColor(zoom, settingsState[INDEX_COLOR], 0f,1f)
         if(color.alpha > 0)
         {
@@ -545,7 +546,7 @@ fun DrawScope.drawSkyStructures(
             val nameMeasured = makeStructureTextMeasurer(structure.name, color, textMeasurer)
             val xOffset = (symbolMeasured.size.width.toFloat() - nameMeasured.size.width.toFloat()) * 0.5f
             val yOffset = symbolMeasured.size.height.toFloat() * 0.8f
-            if (zoom >= STRUCTURES_SHOW_TEXT_ZOOM) {
+            if (zoom >= STRUCTURES_SHOW_TEXT_ZOOM && settingsState[INDEX_DEEP_SKY] == DEEP_SKY_SHOW_TEXT) {
                 drawText(
                     nameMeasured,
                     topLeft = center + Offset(xOffset, yOffset)
