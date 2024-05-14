@@ -46,6 +46,7 @@ class MainActivity : ComponentActivity() {
 
     /** Array with stars as parsed JSON objects */
     private var starsArray: com.google.gson.JsonArray? = null
+    private var skyStructuresArray: com.google.gson.JsonArray? = null
     /** Array with stars with converted coordinates */
     private var stars : HashMap<Int,Star> = HashMap()
     /** Array with sky structures with converted coordinates */
@@ -259,6 +260,10 @@ class MainActivity : ComponentActivity() {
         val constellationsFile = loadJSONFromAnotherFile("constellations.json")
         val jsonConstellations = JsonParser.parseString(constellationsFile).asJsonObject
         constellationsArray = jsonConstellations.getAsJsonArray("constellations")
+
+        val skyStructiresFile = loadJSONFromAnotherFile("skyStructures.json")
+        val jsonSkyStructures = JsonParser.parseString(skyStructiresFile).asJsonObject
+        skyStructuresArray = jsonSkyStructures.getAsJsonArray("skyStructures")
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -283,7 +288,7 @@ class MainActivity : ComponentActivity() {
     private fun calculateObjects() {
         stars = calculateStars(latitude, longitude, starsArray)
         // TODO: add real data to skyStructures
-        skyStructures = getSkyStructures()
+        skyStructures = calculateSkyStructures(latitude, longitude, skyStructuresArray)
         planets = calculatePlanets(latitude, longitude, planetsArray)
         moon = calculateMoon()
         sun = calculateSun(latitude, longitude, planetsArray)

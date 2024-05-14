@@ -1,22 +1,20 @@
 package com.example.skymap.presentation
 
+import Converter
+import android.util.Log
 import androidx.compose.ui.graphics.Color
+import java.time.LocalDateTime
+import java.time.ZoneId
+import java.time.ZoneOffset
+import java.time.ZonedDateTime
 import kotlin.random.Random
 
-class SkyStructures(mag : Double, azimuth: Double, altitude: Double, id: Int) : Star(mag, azimuth, altitude, id) {
+class SkyStructures(mag : Double, azimuth: Double, altitude: Double, id: Int, name: String) : Star(mag, azimuth, altitude, id) {
     // TODO: change default emojis
     var symbol: Char = Char(0x2728)
-    var name: String = ""
+    val name = name;
 
-    // placeholder to test rendering
-    // TODO: change / delete it and replace with real data
-    init {
-            if(Random.nextBoolean())
-               symbol = Char(0x2B50)
-        for(i in (0..4)) {
-            name += Char(Random.nextInt(48, 120))
-        }
-    }
+
 
     override fun getColor(zoom: Float, colorSetting: Int, brightness : Float, scaleFactor: Float): Color {
         return when(colorSetting) {
@@ -27,17 +25,33 @@ class SkyStructures(mag : Double, azimuth: Double, altitude: Double, id: Int) : 
     }
 }
 
-fun getSkyStructures() : ArrayList<SkyStructures> {
+fun calculateSkyStructures(latitude: Double, longitude: Double, skyStructuresArray: com.google.gson.JsonArray?): ArrayList<SkyStructures> {
+    Log.d("Star", "Calculating stars $latitude $longitude")
 
-    // placeholder to test rendering
-    // TODO: change / delete it and replace with real data
-    val ans = ArrayList<SkyStructures>()
-    for(i in (0..10)) {
-        val m = Random.nextDouble(3.14)
-        val az = Random.nextDouble(3.14)
-        val al = Random.nextDouble(3.14)
-        val temp = SkyStructures(m, az, al, 0)
-        ans.add(temp)
+    val localDateTime = LocalDateTime.now(ZoneOffset.UTC)
+    val zoneId = ZoneId.of("GMT")
+    val zonedDateTime = ZonedDateTime.of(localDateTime, zoneId)
+    val converter = Converter(latitude, longitude, zonedDateTime)
+    val skyStructures : ArrayList<SkyStructures> = ArrayList()
+
+    skyStructuresArray?.forEach { ss ->
+        val ssJsonObject = ss.asJsonObject
+        val coordinates = ssJsonObject.getAsJsonObject("coordinates")
+        val dec: Double = coordinates.asJsonObject.getAsJsonPrimitive("dec").asDouble
+        val ra: Double = coordinates.asJsonObject.getAsJsonPrimitive("ra").asDouble
+        val mag: Double = ssJsonObject.getAsJsonPrimitive("vmag").asDouble
+        val name: String = ssJsonObject.getAsJsonPrimitive("name").asString
+
+        val equatorialCoordinates = GeocentricEquatorialCoordinates(
+            rightAscension = ra,
+            declination = dec
+        )
+
+        val horizontalCoordinates = converter.equatorialToHorizontal(equatorialCoordinates)
+
+        if (horizontalCoordinates.altitude > 0) {
+            skyStructures.add( SkyStructures(mag, horizontalCoordinates.azimuth, horizontalCoordinates.altitude, 0, name))
+        }
     }
-    return ans
+    return skyStructures
 }
