@@ -535,25 +535,32 @@ fun DrawScope.drawSkyStructures(
         val color = structure.getColor(zoom, settingsState[INDEX_COLOR], 0f,1f)
         if(color.alpha > 0)
         {
-
             val center = structure.calculatePosition(position, zoom, -mapAzimuth, upsideDown)
-            val symbol : String = "" + structure.symbol
-            val symbolMeasured = makeStructureTextMeasurer(symbol, color, textMeasurer)
-            drawText(
-                symbolMeasured,
-                topLeft = center
-            )
-            val nameMeasured = makeStructureTextMeasurer(structure.name, color, textMeasurer)
-            val xOffset = (symbolMeasured.size.width.toFloat() - nameMeasured.size.width.toFloat()) * 0.5f
-            val yOffset = symbolMeasured.size.height.toFloat() * 0.8f
-            if (zoom >= STRUCTURES_SHOW_TEXT_ZOOM && settingsState[INDEX_DEEP_SKY] == DEEP_SKY_SHOW_TEXT) {
+            if (isCloseToScreen(center)) {
+                val symbol : String = "" + structure.symbol
+                val symbolMeasured = makeStructureTextMeasurer(symbol, color, textMeasurer)
                 drawText(
-                    nameMeasured,
-                    topLeft = center + Offset(xOffset, yOffset)
+                    symbolMeasured,
+                    topLeft = center
                 )
+
+                if (zoom >= STRUCTURES_SHOW_TEXT_ZOOM && settingsState[INDEX_DEEP_SKY] == DEEP_SKY_SHOW_TEXT) {
+                    val nameMeasured = makeStructureTextMeasurer(structure.name, color, textMeasurer)
+                    val xOffset = (symbolMeasured.size.width.toFloat() - nameMeasured.size.width.toFloat()) * 0.5f
+                    val yOffset = symbolMeasured.size.height.toFloat() * 0.8f
+                    drawText(
+                        nameMeasured,
+                        topLeft = center + Offset(xOffset, yOffset)
+                    )
+                }
             }
         }
     }
+}
+
+fun isCloseToScreen(o: Offset) : Boolean {
+    return  -10f <= o.x && o.x <= 2f * WATCHFACE_RADIUS + 10f &&
+            -10f <= o.y && o.y <= 2f * WATCHFACE_RADIUS + 10f
 }
 
 fun makeStructureTextMeasurer(text: String, color: Color, textMeasurer: TextMeasurer) : TextLayoutResult{
