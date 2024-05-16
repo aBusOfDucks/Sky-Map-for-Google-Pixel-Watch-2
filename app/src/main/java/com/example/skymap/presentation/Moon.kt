@@ -1,8 +1,8 @@
 package com.example.skymap.presentation
 
-import Converter
 import androidx.compose.ui.graphics.Color
 import eclipticToEquatorial
+import equatorialToHorizontal
 import getJulianDate
 import kotlin.math.PI
 import kotlin.math.abs
@@ -152,8 +152,7 @@ private fun calculatePhase() : Double {
 fun calculateMoon(latitude : Double, longitude : Double) : Moon {
     val moonEclipticCoordinates = calculateMoonPosition(latitude, longitude)
     val moonEquatorialCoordinates = eclipticToEquatorial(moonEclipticCoordinates)
-    val converter = Converter(latitude, longitude, zonedDateTimeNow())
-    val horizontalPositions: GeocentricHorizontalCoordinates = converter.equatorialToHorizontal(moonEquatorialCoordinates)
+    val horizontalPositions: GeocentricHorizontalCoordinates = equatorialToHorizontal(latitude, longitude, moonEquatorialCoordinates)
 
     val phase = calculatePhase()
 

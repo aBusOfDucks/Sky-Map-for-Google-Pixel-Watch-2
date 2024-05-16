@@ -1,4 +1,3 @@
-
 import com.example.skymap.presentation.ECLIPTIC_ANGLE
 import com.example.skymap.presentation.GeocentricEclipticCoordinates
 import com.example.skymap.presentation.GeocentricEquatorialCoordinates
@@ -18,7 +17,6 @@ import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.sin
 import kotlin.math.sqrt
-
 
 /**
  * Function calculates Julian Date at a given Gregorian Day
@@ -59,87 +57,70 @@ fun getJulianDate(): Double {
     return JD
 }
 
-class Converter(
-    latitudeDegree: Double, longitudeDegree: Double, zonedTime: ZonedDateTime
-) {
-    private val latitude: Double
-    private val longitude: Double
-    private val time: ZonedDateTime
+/**
+ * Function calculates Greenwich Mean Sidereal Time of observation
+ * and then changes unit to radian.
+ * @param time Greenwich Mean Time of observation [ZonedDateTime]
+ * @return hour angle of Greenwich Mean Sidereal Time at time
+ * of an observation in radians [Double]
+ */
+private fun getGMST(): Double {
+    val JD = getJulianDate()
+    val time = zonedDateTimeNow()
 
-    /**
-     * Constructor
-     * @param latitude latitude of an observer in degrees [Double]
-     * @param longitude longitude of on observer in degrees [Double]
-     * @param time Greenwich sidereal time of observation [ZonedDateTime]
-     * @return converter
-     */
-    init {
-        latitude = toRadians(latitudeDegree)
-        longitude = toRadians(longitudeDegree)
-        time = zonedTime
+    val d = JD - 2451545.0
+    val T = d / 36525
+
+    var GMST = 24110.54841 + 8640184.812866 * T + 0.093104 * T * T - 0.0000062 * T * T * T
+
+    val midnight = LocalTime.of(0, 0)
+    val currentTime = time.toLocalTime()
+    val duration = Duration.between(midnight, currentTime)
+
+    GMST += duration.seconds
+    GMST %= 86400
+
+    return GMST / 86400 * 2 * PI
+}
+
+/**
+ * Function that changes equatorial coordinates of an object to horizontal coordinates,
+ * dependent on an observer.
+ * @param equatorial equatorial coordinates of an object [GeocentricEquatorialCoordinates]
+ * @return horizontal coordinates in radians [GeocentricHorizontalCoordinates]
+ */
+fun equatorialToHorizontal(
+    latitudeDegree: Double,
+    longitudeDegree: Double,
+    equatorial: GeocentricEquatorialCoordinates
+): GeocentricHorizontalCoordinates {
+    val declination = toRadians(equatorial.declination)
+    val latitude = toRadians(latitudeDegree)
+    val longitude = toRadians(longitudeDegree)
+
+    val hourAngle = (getGMST() + longitude - equatorial.rightAscension)
+
+    val sinAltitude = sin(declination) * sin(latitude) + cos(declination) * cos(latitude) * cos(hourAngle)
+
+    val altitude = asin(sinAltitude)
+
+    val cosAltitude = cos(altitude)
+
+    val sinAzimuth = - (cos(declination) * sin(hourAngle)) / cosAltitude
+
+    val cosAzimuth = - ((cos(declination) * sin(latitude) * cos(hourAngle)) - sin(declination) * cos(latitude)) / cosAltitude
+
+    val tanAzimuth = sinAzimuth / cosAzimuth
+
+    var azimuth = atan(tanAzimuth)
+
+    if (sinAzimuth < 0 && cosAzimuth > 0) {
+        azimuth += 2 * PI
+    } else if (!(sinAzimuth > 0 && cosAzimuth > 0)) {
+        azimuth += PI
     }
 
-    /**
-     * Function calculates Greenwich Mean Sidereal Time of observation
-     * and then changes unit to radian.
-     * @param time Greenwich Mean Time of observation [ZonedDateTime]
-     * @return hour angle of Greenwich Mean Sidereal Time at time
-     * of an observation in radians [Double]
-     */
-    private fun getGMST(): Double {
-        val JD = getJulianDate()
-
-        val d = JD - 2451545.0
-        val T = d / 36525
-
-        var GMST = 24110.54841 + 8640184.812866 * T + 0.093104 * T * T - 0.0000062 * T * T * T
-
-        val midnight = LocalTime.of(0, 0)
-        val currentTime = time.toLocalTime()
-        val duration = Duration.between(midnight, currentTime)
-
-        GMST += duration.seconds
-        GMST %= 86400
-
-        return GMST / 86400 * 2 * PI
-    }
-
-    /**
-     * Function that changes equatorial coordinates of an object to horizontal coordinates,
-     * dependent on an observer.
-     * @param equatorial equatorial coordinates of an object [GeocentricEquatorialCoordinates]
-     * @return horizontal coordinates in radians [GeocentricHorizontalCoordinates]
-     */
-    fun equatorialToHorizontal(
-        equatorial: GeocentricEquatorialCoordinates
-    ): GeocentricHorizontalCoordinates {
-        val declination = toRadians(equatorial.declination)
-
-        val hourAngle = (getGMST() + longitude - equatorial.rightAscension)
-
-        val sinAltitude = sin(declination) * sin(latitude) + cos(declination) * cos(latitude) * cos(hourAngle)
-
-        val altitude = asin(sinAltitude)
-
-        val cosAltitude = cos(altitude)
-
-        val sinAzimuth = - (cos(declination) * sin(hourAngle)) / cosAltitude
-
-        val cosAzimuth = - ((cos(declination) * sin(latitude) * cos(hourAngle)) - sin(declination) * cos(latitude)) / cosAltitude
-
-        val tanAzimuth = sinAzimuth / cosAzimuth
-
-        var azimuth = atan(tanAzimuth)
-
-        if (sinAzimuth < 0 && cosAzimuth > 0) {
-            azimuth += 2 * PI
-        } else if (!(sinAzimuth > 0 && cosAzimuth > 0)) {
-            azimuth += PI
-        }
-
-        return GeocentricHorizontalCoordinates(altitude, azimuth)
-    }
-
+    return GeocentricHorizontalCoordinates(altitude, azimuth)
 }
 
 fun getPlanetObjects(planetsArray: com.google.gson.JsonArray?) : ArrayList<Planet> {

@@ -1,10 +1,10 @@
 package com.example.skymap.presentation
 
-import Converter
 import getPlanetObjects
 import androidx.compose.ui.graphics.Color
 import calculateGeocentricPositions
 import com.google.gson.JsonArray
+import equatorialToHorizontal
 import getJulianDate
 
 class Sun(azimuth : Double, altitude : Double) : SkyPoint(azimuth,altitude) {
@@ -20,16 +20,13 @@ fun calculateSun(
     val planetObjects = getPlanetObjects(planetArray)
     val earth = planetObjects[2]
 
-    val zonedDateTime = zonedDateTimeNow()
-
-    val converter = Converter(latitude, longitude, zonedDateTime)
     val JED = getJulianDate()
 
     val earthPositions: HeliocentricEclipticCoordinates = earth.calculateHeliocentricPositions(JED)
     val heliocentricSunPositions = HeliocentricEclipticCoordinates(0.0, 0.0, 0.0)
 
     val equatorialPositions: GeocentricEquatorialCoordinates = calculateGeocentricPositions(heliocentricSunPositions, earthPositions)
-    val horizontalPositions: GeocentricHorizontalCoordinates = converter.equatorialToHorizontal(equatorialPositions)
+    val horizontalPositions: GeocentricHorizontalCoordinates = equatorialToHorizontal(latitude, longitude, equatorialPositions)
 
     return Sun(horizontalPositions.azimuth, horizontalPositions.altitude)
 }

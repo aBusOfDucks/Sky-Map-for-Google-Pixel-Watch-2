@@ -1,8 +1,8 @@
 package com.example.skymap.presentation
 
-import Converter
 import android.util.Log
 import androidx.compose.ui.graphics.Color
+import equatorialToHorizontal
 import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.ZoneOffset
@@ -28,10 +28,6 @@ class SkyStructures(mag : Double, azimuth: Double, altitude: Double, id: Int, na
 fun calculateSkyStructures(latitude: Double, longitude: Double, skyStructuresArray: com.google.gson.JsonArray?): ArrayList<SkyStructures> {
     Log.d("Star", "Calculating stars $latitude $longitude")
 
-    val localDateTime = LocalDateTime.now(ZoneOffset.UTC)
-    val zoneId = ZoneId.of("GMT")
-    val zonedDateTime = ZonedDateTime.of(localDateTime, zoneId)
-    val converter = Converter(latitude, longitude, zonedDateTime)
     val skyStructures : ArrayList<SkyStructures> = ArrayList()
 
     skyStructuresArray?.forEach { ss ->
@@ -47,7 +43,7 @@ fun calculateSkyStructures(latitude: Double, longitude: Double, skyStructuresArr
             declination = dec
         )
 
-        val horizontalCoordinates = converter.equatorialToHorizontal(equatorialCoordinates)
+        val horizontalCoordinates = equatorialToHorizontal(latitude, longitude, equatorialCoordinates)
 
         if (horizontalCoordinates.altitude > 0) {
             skyStructures.add( SkyStructures(mag, horizontalCoordinates.azimuth, horizontalCoordinates.altitude, 0, name))

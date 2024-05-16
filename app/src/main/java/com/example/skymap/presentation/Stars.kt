@@ -2,11 +2,7 @@ package com.example.skymap.presentation
 
 import android.util.Log
 import androidx.compose.ui.graphics.Color
-import java.time.LocalDateTime
-import java.time.ZoneId
-import java.time.ZoneOffset
-import java.time.ZonedDateTime
-import Converter
+import equatorialToHorizontal
 
 open class Star(private val mag : Double, azimuth: Double, altitude: Double, id: Int) : SkyPoint(azimuth, altitude) {
     private var size: Int = 1
@@ -67,10 +63,6 @@ fun maxStarAlpha(brightness: Float) : Float {
 fun calculateStars(latitude: Double, longitude: Double, starsArray: com.google.gson.JsonArray?): HashMap<Int,Star> {
     Log.d("Star", "Calculating stars $latitude $longitude")
 
-    val localDateTime = LocalDateTime.now(ZoneOffset.UTC)
-    val zoneId = ZoneId.of("GMT")
-    val zonedDateTime = ZonedDateTime.of(localDateTime, zoneId)
-    val converter = Converter(latitude, longitude, zonedDateTime)
     val stars : HashMap<Int,Star> = HashMap()
 
     starsArray?.forEach { star ->
@@ -86,7 +78,7 @@ fun calculateStars(latitude: Double, longitude: Double, starsArray: com.google.g
             declination = dec
         )
 
-        val horizontalCoordinates = converter.equatorialToHorizontal(equatorialCoordinates)
+        val horizontalCoordinates = equatorialToHorizontal(latitude, longitude, equatorialCoordinates)
 
         if (horizontalCoordinates.altitude > 0) {
             stars[id] = Star(mag, horizontalCoordinates.azimuth, horizontalCoordinates.altitude, id)
