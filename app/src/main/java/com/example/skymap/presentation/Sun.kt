@@ -10,6 +10,10 @@ import getJulianDate
 class Sun(azimuth : Double, altitude : Double) : SkyPoint(azimuth,altitude) {
     override val color : Color = Color(255,255,0)
     override val colorRedMode: Color = Color(255, 150, 0)
+
+    fun getGeocentricHorizontalCoordinates() : GeocentricHorizontalCoordinates {
+        return GeocentricHorizontalCoordinates(altitude, azimuth)
+    }
 }
 
 fun calculateSun(

@@ -6,6 +6,7 @@ import equatorialToHorizontal
 import getJulianDate
 import kotlin.math.PI
 import kotlin.math.abs
+import kotlin.math.acos
 import kotlin.math.asin
 import kotlin.math.cos
 import kotlin.math.floor
@@ -28,7 +29,7 @@ val MOON_DARK_COLOR = Color(40, 40, 40)
 // phase == 0 means new Moon
 // phase increases over time
 // When angle == 0, the waxing crescent points to the east (on the skymap)
-// When angle == PI/2, the waxing crescent points to the south (on the skymap)
+// When angle == PI, the waxing crescent points to the south (on the skymap)
 class Moon(
     val phase : Float,
     val angle : Float,
@@ -111,11 +112,39 @@ private fun calculateMoonPosition(latitude : Double, longitude : Double) : Geoce
     return GeocentricEclipticCoordinates(lambda, beta)
 }
 
+private fun calculateAngle(moon: GeocentricHorizontalCoordinates,
+                           sun: GeocentricHorizontalCoordinates) : Float {
+    var deltaAzimuth = sun.azimuth - moon.azimuth
+    if (deltaAzimuth < 0) deltaAzimuth += 2 * PI
+    var a = sin(moon.altitude) * sin(sun.altitude) + cos(moon.altitude) * cos(sun.altitude) * cos(deltaAzimuth)
+    a = acos(a)
+
+    var C = sin(sun.altitude) * cos(moon.altitude) - cos(sun.altitude) * sin(moon.altitude) * cos(deltaAzimuth)
+    C /= sin(a)
+
+    // in case 1.00000001 etc
+    if (C > 1) {
+        C = 1.0
+    } else if (C < -1) {
+        C = -1.0
+    }
+
+    C = acos(C)
+
+    if (deltaAzimuth < PI) {
+        C = - PI / 2 + C
+    } else {
+        C = - PI / 2 - C
+    }
+
+    return C.toFloat()
+}
+
 private fun calculateNewMoonDate(N: Int) : Double {
     return 5.597661 + 29.5305888610 * N + 100.026 * N * N * 1e-12
 }
 
-private fun calculatePhase() : Double {
+private fun calculatePhase() : Float {
     val synodicPeriod = 29.531
     val today = getJulianDate() - J2000
     val synodicMonths = today / synodicPeriod
@@ -131,14 +160,11 @@ private fun calculatePhase() : Double {
         lastNewMoon = calculateNewMoonDate(N)
     }
 
-    // the date of the next new moon
-    val nextNewMoon = calculateNewMoonDate(N + 1)
-
     // this is how many days passed from last new moon
-    val daysFromNewMoon = today - lastNewMoon
+    val moonsAge = today - lastNewMoon
 
     // % of moon phase from
-    val cyclePercent = daysFromNewMoon / synodicPeriod
+    val cyclePercent = moonsAge / synodicPeriod
 
     // from 0 to 2PI
     var phase = 2 * PI * cyclePercent
@@ -146,16 +172,17 @@ private fun calculatePhase() : Double {
         phase -= 2 * PI
     }
 
-    return phase
+    return phase.toFloat()
 }
 
-fun calculateMoon(latitude : Double, longitude : Double) : Moon {
+fun calculateMoon(latitude : Double, longitude : Double, sunCoordinates: GeocentricHorizontalCoordinates) : Moon {
     val moonEclipticCoordinates = calculateMoonPosition(latitude, longitude)
     val moonEquatorialCoordinates = eclipticToEquatorial(moonEclipticCoordinates)
-    val horizontalPositions: GeocentricHorizontalCoordinates = equatorialToHorizontal(latitude, longitude, moonEquatorialCoordinates)
+    val moonPosition: GeocentricHorizontalCoordinates = equatorialToHorizontal(latitude, longitude, moonEquatorialCoordinates)
 
     val phase = calculatePhase()
+    val angle = calculateAngle(moonPosition, sunCoordinates)
 
-    val moon = Moon(phase.toFloat(), 0f, horizontalPositions.azimuth, horizontalPositions.altitude)
+    val moon = Moon(phase, angle, moonPosition.azimuth, moonPosition.altitude)
     return moon
 }
