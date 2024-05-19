@@ -29,7 +29,7 @@ val MOON_DARK_COLOR = Color(40, 40, 40)
 // phase == 0 means new Moon
 // phase increases over time
 // When angle == 0, the waxing crescent points to the east (on the skymap)
-// When angle == PI, the waxing crescent points to the south (on the skymap)
+// When angle == PI / 2, the waxing crescent points to the south (on the skymap)
 class Moon(
     val phase : Float,
     val angle : Float,
@@ -131,11 +131,13 @@ private fun calculateAngle(moon: GeocentricHorizontalCoordinates,
 
     C = acos(C)
 
-    if (deltaAzimuth < PI) {
-        C = - PI / 2 + C
+    if (deltaAzimuth > PI) {
+        C = PI / 2 + C
     } else {
-        C = - PI / 2 - C
+        C = PI / 2 - C
     }
+
+    C += moon.azimuth
 
     return C.toFloat()
 }
