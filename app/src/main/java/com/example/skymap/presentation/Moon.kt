@@ -183,7 +183,11 @@ fun calculateMoon(latitude : Double, longitude : Double, sunCoordinates: Geocent
     val moonPosition: GeocentricHorizontalCoordinates = equatorialToHorizontal(latitude, longitude, moonEquatorialCoordinates)
 
     val phase = calculatePhase()
-    val angle = calculateAngle(moonPosition, sunCoordinates)
+    var angle = calculateAngle(moonPosition, sunCoordinates)
+
+    if (phase < 0) {
+        angle += PI.toFloat()
+    }
 
     val moon = Moon(phase, angle, moonPosition.azimuth, moonPosition.altitude)
     return moon
