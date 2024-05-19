@@ -30,3 +30,20 @@ fun calculateSun(
 
     return Sun(horizontalPositions.azimuth, horizontalPositions.altitude)
 }
+
+fun calculateSunHorizontal(
+    latitude: Double,
+    longitude: Double,
+    planetArray: JsonArray?
+): GeocentricHorizontalCoordinates {
+    val planetObjects = getPlanetObjects(planetArray)
+    val earth = planetObjects[2]
+
+    val JED = getJulianDate()
+
+    val earthPositions: HeliocentricEclipticCoordinates = earth.calculateHeliocentricPositions(JED)
+    val heliocentricSunPositions = HeliocentricEclipticCoordinates(0.0, 0.0, 0.0)
+
+    val equatorialPositions: GeocentricEquatorialCoordinates = calculateGeocentricPositions(heliocentricSunPositions, earthPositions)
+    return equatorialToHorizontal(latitude, longitude, equatorialPositions)
+}

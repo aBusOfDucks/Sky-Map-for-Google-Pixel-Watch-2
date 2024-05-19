@@ -287,10 +287,9 @@ class MainActivity : ComponentActivity() {
 
     private fun calculateObjects() {
         stars = calculateStars(latitude, longitude, starsArray)
-        // TODO: add real data to skyStructures
         skyStructures = calculateSkyStructures(latitude, longitude, skyStructuresArray)
         planets = calculatePlanets(latitude, longitude, planetsArray)
-        moon = calculateMoon(latitude, longitude)
+        moon = calculateMoon(latitude, longitude, calculateSunHorizontal(latitude, longitude, planetsArray))
         sun = calculateSun(latitude, longitude, planetsArray)
         constellations = calculateConstellations(constellationsArray)
     }

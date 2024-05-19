@@ -1,5 +1,6 @@
 package com.example.skymap.presentation
 
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import eclipticToEquatorial
 import equatorialToHorizontal
@@ -7,9 +8,11 @@ import getJulianDate
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.asin
+import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.floor
 import kotlin.math.sin
+import kotlin.math.sqrt
 
 private const val EPS = 1e-4
 
@@ -149,13 +152,41 @@ private fun calculatePhase() : Double {
     return phase
 }
 
-fun calculateMoon(latitude : Double, longitude : Double) : Moon {
+fun getLightPoint(sun: GeocentricHorizontalCoordinates, moon: GeocentricHorizontalCoordinates) : GeocentricHorizontalCoordinates {
+    val sunX = cos(sun.altitude) * sin(sun.azimuth)
+    val sunY = cos(sun.altitude) * cos(sun.azimuth)
+    val sunZ = sin(sun.altitude)
+    val moonX = cos(moon.altitude) * sin(moon.azimuth)
+    val moonY = cos(moon.altitude) * cos(moon.azimuth)
+    val moonZ = sin(moon.altitude)
+    val t = 0.0001
+    val x = sunX * t + moonX * (1 - t)
+    val y = sunY * t + moonY * (1 - t)
+    val z = sunZ * t + moonZ * (1 - t)
+    val r = sqrt(x * x + y * y + z * z)
+    val alt = asin(z / r)
+    val az = atan2(x / r, y / r)
+    return GeocentricHorizontalCoordinates(alt, az);
+}
+
+fun calculateMoon(latitude : Double, longitude : Double, sun : GeocentricHorizontalCoordinates) : Moon {
     val moonEclipticCoordinates = calculateMoonPosition(latitude, longitude)
     val moonEquatorialCoordinates = eclipticToEquatorial(moonEclipticCoordinates)
     val horizontalPositions: GeocentricHorizontalCoordinates = equatorialToHorizontal(latitude, longitude, moonEquatorialCoordinates)
 
     val phase = calculatePhase()
 
-    val moon = Moon(phase.toFloat(), 0f, horizontalPositions.azimuth, horizontalPositions.altitude)
+    val lightPositions = getLightPoint(sun, horizontalPositions)
+    val lightSkyPoint = SkyPoint(lightPositions.azimuth, lightPositions.altitude)
+    val moonSkyPoint = SkyPoint(horizontalPositions.azimuth, horizontalPositions.altitude)
+    val moonO = moonSkyPoint.calculatePosition(Offset(0f, 0f), 1f, 0f, false)
+    val lightO = lightSkyPoint.calculatePosition(Offset(0f, 0f), 1f, 0f, false)
+    val delta = lightO - moonO
+    var angle = atan2(delta.y, delta.x)
+    if (phase < 0) {
+        angle *= -1
+    }
+
+    val moon = Moon(phase.toFloat(), angle, horizontalPositions.azimuth, horizontalPositions.altitude)
     return moon
 }
