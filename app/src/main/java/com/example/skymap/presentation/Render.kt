@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -28,13 +29,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.drawscope.rotateRad
 import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.res.imageResource
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextMeasurer
 import androidx.compose.ui.text.TextStyle
@@ -42,9 +46,13 @@ import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.tooling.preview.Devices
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.sp
 import androidx.wear.compose.material.MaterialTheme
 import androidx.wear.compose.material.Text
+import com.example.skymap.R
 import com.example.skymap.presentation.theme.SkyMapTheme
 import kotlin.math.PI
 import kotlin.math.abs
@@ -171,6 +179,10 @@ fun WearApp(
 
     val textMeasurer = rememberTextMeasurer()
 
+    // Public domain, sourced:
+    // https://en.m.wikipedia.org/wiki/File:Full_moon.jpeg#/media/File%3AFull_moon.png
+    // then modified.
+    val moonResource = ImageBitmap.imageResource(R.drawable.full_moon)
 
     SkyMapTheme {
 
@@ -272,7 +284,7 @@ fun WearApp(
                         drawSun(sun, settingsState, zoom, position, mapAzimuth, upsideDown)
                     }
                     if (settingsState[INDEX_SUN_MOON] and FLAG_MOON > 0) {
-                        drawMoon(moon, backgroundColor, lightColor, zoom, position, mapAzimuth, upsideDown)
+                        drawMoon(moon, backgroundColor, lightColor, zoom, position, mapAzimuth, upsideDown, moonResource)
                     }
 
                     // Pointer to North
@@ -439,7 +451,8 @@ fun DrawScope.drawMoon(
     zoom: Float,
     position: Offset,
     mapAzimuth: Float,
-    upsideDown: Boolean) {
+    upsideDown: Boolean,
+    moonImage: ImageBitmap) {
     val pos = moon.calculatePosition(position, zoom, -mapAzimuth, upsideDown)
     val rotateAngle = moon.angle - mapAzimuth
     // It is easier to transform a set path than to include angles and offsets in the path building
@@ -448,7 +461,7 @@ fun DrawScope.drawMoon(
         rotateRad(rotateAngle, pos)
         translate(pos.x, pos.y)
     }) {
-        drawMoonFace(moon,darkColor, lightColor)
+        drawMoonFace(moon,darkColor, lightColor, moonImage)
     }
 }
 
@@ -474,7 +487,7 @@ fun DrawScope.drawSun(
         )
 }
 
-fun DrawScope.drawMoonFace(moon: Moon, darkColor: Color, lightColor : Color) {
+fun DrawScope.drawMoonFace(moon: Moon, darkColor: Color, lightColor : Color, moonImage: ImageBitmap) {
     drawCircle(
         color = blendColors(darkColor, MOON_DARK_COLOR),
         radius = MOON_RADIUS,
@@ -490,6 +503,12 @@ fun DrawScope.drawMoonFace(moon: Moon, darkColor: Color, lightColor : Color) {
     path.addMoonArc(wanp, -1f)
     path.close()
     drawPath(path, lightColor, style = Fill)
+    drawImage(
+        image = moonImage,
+        dstOffset = IntOffset(-MOON_RADIUS.toInt(), -MOON_RADIUS.toInt()),
+        dstSize = IntSize(2* MOON_RADIUS.toInt(), 2* MOON_RADIUS.toInt()),
+        blendMode = BlendMode.Multiply
+    )
 }
 
 fun Path.addMoonArc(arcApexX : Float, dir : Float) {
