@@ -274,15 +274,25 @@ fun WearApp(
                         )
                     }
 
-                    // Planets
+                    // In order for name collision detection to work, all the planets
+                    // need to be passed to the drawing function.
+
+                    // Planets behind the Sun
                     if (showPlanets(settingsState[INDEX_PLANET])) {
-                        drawPlanets(planets, settingsState, zoom, position, mapAzimuth, upsideDown, textMeasurer)
+                        drawPlanets(planets, settingsState, zoom, position, mapAzimuth, upsideDown, textMeasurer, true)
                     }
 
-                    // The Moon and the Sun
+                    // The Sun
                     if (settingsState[INDEX_SUN_MOON] and FLAG_SUN > 0) {
                         drawSun(sun, settingsState, zoom, position, mapAzimuth, upsideDown)
                     }
+
+                    // Planets in front of the Sun
+                    if (showPlanets(settingsState[INDEX_PLANET])) {
+                        drawPlanets(planets, settingsState, zoom, position, mapAzimuth, upsideDown, textMeasurer, false)
+                    }
+
+                    // The Moon
                     if (settingsState[INDEX_SUN_MOON] and FLAG_MOON > 0) {
                         drawMoon(moon, backgroundColor, lightColor, zoom, position, mapAzimuth, upsideDown, moonResource)
                     }
@@ -397,13 +407,14 @@ fun DrawScope.drawConstellationsNames(
 
 
 fun DrawScope.drawPlanets(
-    planets: ArrayList<Planet>,
+    planets: List<Planet>,
     settingsState: SnapshotStateList<Int>,
     zoom: Float,
     position: Offset,
     mapAzimuth: Float,
     upsideDown: Boolean,
-    textMeasurer: TextMeasurer
+    textMeasurer: TextMeasurer,
+    behindSun : Boolean
 ) {
     val textRectList : ArrayList<RectF> = ArrayList()
     for(planet in planets)
@@ -414,12 +425,13 @@ fun DrawScope.drawPlanets(
             RED_MODE -> Color.Red
             else -> planet.color
         }
-
-        drawCircle(
-            color = color,
-            radius = PLANET_RADIUS,
-            center = center
-        )
+        if (planet.behindSun() == behindSun) {
+            drawCircle(
+                color = color,
+                radius = PLANET_RADIUS,
+                center = center
+            )
+        }
         if(showPlanetsText(settingsState[INDEX_PLANET])) {
             val text : String = if (zoom > NAME_CUTOFF_ZOOM) planet.name else planet.symbol.toString()
             val textLayoutResult = textMeasurer.measure(text)
@@ -435,11 +447,13 @@ fun DrawScope.drawPlanets(
                 topLeft.x + textLayoutResult.size.width.toFloat(),
                 topLeft.y + textLayoutResult.size.height.toFloat()
             ))
-            drawText(
-                textLayoutResult,
-                color = color,
-                topLeft = topLeft
-            )
+            if (planet.behindSun() == behindSun) {
+                drawText(
+                    textLayoutResult,
+                    color = color,
+                    topLeft = topLeft
+                )
+            }
         }
     }
 }
