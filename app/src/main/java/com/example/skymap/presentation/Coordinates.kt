@@ -192,7 +192,7 @@ fun eclipticToEquatorial(ecliptic: GeocentricEclipticCoordinates)
         ra += PI
     }
 
-    return GeocentricEquatorialCoordinates(ra, toDegrees(dec))
+    return GeocentricEquatorialCoordinates(ra, toDegrees(dec), ecliptic.r)
 }
 
 fun calculateGeocentricPositions(
@@ -208,7 +208,7 @@ fun calculateGeocentricPositions(
     val l = atan2(y, x)
     val b = asin(z / r)
 
-    val ecliptic = GeocentricEclipticCoordinates(l, b)
+    val ecliptic = GeocentricEclipticCoordinates(l, b, r)
 
     return eclipticToEquatorial(ecliptic)
 }

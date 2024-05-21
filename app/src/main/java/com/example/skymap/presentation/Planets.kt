@@ -53,6 +53,7 @@ fun calculatePlanets(
         val horizontalPositions: GeocentricHorizontalCoordinates = equatorialToHorizontal(latitude, longitude, equatorialPositions)
 
         planet.setHorizontal(horizontalPositions)
+        planet.setDistance(equatorialPositions.r)
     }
 
     return planetObjects
@@ -75,8 +76,9 @@ class Planet(
     val symbol: Char = symbolMap[name]!!,
     override val color: Color = colorMap[name]!!,
     azimuth: Double = 0.0,
-    altitude: Double = 0.0
-): SkyPoint(azimuth, altitude){
+    altitude: Double = 0.0,
+    private var earthDistance: Double = 0.0,
+): SkyPoint(azimuth, altitude) {
 
     private fun calculateEccentricAnomaly(M: Double, e: Double, E_n: Double): Double {
         val deltaM = M - (E_n - toDegrees(e) * sin(toRadians(E_n)))
@@ -137,7 +139,7 @@ class Planet(
         val x_h = a * (cos(toRadians(E)) - e)
         val y_h = a * sqrt(1 - e * e) * sin(toRadians(E))
 
-        // odległość od słońca
+        // distance From Sun
         //val r_h = sqrt(x_h * x_h + y_h * y_h)
 
         val heliocentricOrbitalCoordinates = HeliocentricOrbitalCoordinates(x_h, y_h, 0.0)
@@ -158,6 +160,19 @@ class Planet(
         altitude = horizontalPositions.altitude
         reproject()
     }
+
+    fun setDistance(r: Double) {
+        earthDistance = r
+    }
+
+    fun behindSun(): Boolean {
+        return if (r > 1) {
+            true
+        } else {
+            false
+        }
+    }
+
 }
 
 

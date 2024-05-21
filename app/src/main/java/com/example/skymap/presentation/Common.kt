@@ -13,13 +13,13 @@ data class HeliocentricOrbitalCoordinates(val x: Double, val y: Double, val z: D
 
 data class HeliocentricEclipticCoordinates(val x: Double, val y: Double, val z: Double)
 
-// radians, degrees
-data class GeocentricEquatorialCoordinates(val rightAscension: Double, val declination: Double)
+// radians, degrees, au
+data class GeocentricEquatorialCoordinates(val rightAscension: Double, val declination: Double, val r: Double = 0.0)
 
 // radians, radians
 data class GeocentricHorizontalCoordinates(val altitude: Double, val azimuth: Double)
 
-data class GeocentricEclipticCoordinates(val longitude: Double, val latitude: Double)
+data class GeocentricEclipticCoordinates(val longitude: Double, val latitude: Double, val r: Double = 0.0)
 
 fun toDegrees(n: Double) : Double {
     return 180 / PI * n
