@@ -180,12 +180,8 @@ class MainActivity : ComponentActivity() {
                 requestLocationUpdates()
             }
             else -> {
-                // We do not have permissions
-                // Let's try to ask for them again
-                // This is not a very clean solution,
-                // but the application will not work without
-                // location updates
-                requestLocationPermission()
+                // We were not granted permission by the user
+                // The app will always display "Waiting for GPS"
             }
         }
     }
@@ -214,6 +210,7 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun requestLocationUpdates() {
+        // We always need to check permissions
         if (ContextCompat.checkSelfPermission(
                 this,
                 Manifest.permission.ACCESS_COARSE_LOCATION
@@ -287,7 +284,6 @@ class MainActivity : ComponentActivity() {
 
     private fun calculateObjects() {
         stars = calculateStars(latitude, longitude, starsArray)
-        // TODO: add real data to skyStructures
         skyStructures = calculateSkyStructures(latitude, longitude, skyStructuresArray)
         planets = calculatePlanets(latitude, longitude, planetsArray)
         sun = calculateSun(latitude, longitude, planetsArray)
@@ -382,6 +378,9 @@ fun shiftAngle(a: Float) : Float {
     return res
 }
 
+/**
+ * Performs interpolation between two angles, interpolates along the shortest arc between them
+ */
 fun blendAngles(a1: Float, a2: Float, weight: Float) : Float{
     val diff = shiftAngle(a2 - a1)
     return shiftAngle(a1 + weight * diff)

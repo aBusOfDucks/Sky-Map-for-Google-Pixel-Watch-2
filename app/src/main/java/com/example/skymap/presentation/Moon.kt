@@ -185,6 +185,7 @@ fun calculateMoon(latitude : Double, longitude : Double, sunCoordinates: Geocent
     val phase = calculatePhase()
     var angle = calculateAngle(moonPosition, sunCoordinates)
 
+    // The angle is of the lit part of the moon, but we want the angle of the whole moon.
     if (phase < 0) {
         angle += PI.toFloat()
     }

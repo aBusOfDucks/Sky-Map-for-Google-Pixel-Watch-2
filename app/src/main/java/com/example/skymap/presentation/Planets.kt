@@ -21,11 +21,12 @@ val colorMap = mapOf(
     "Neptune" to Color(0.55f,0.6f,0.75f,1f)
 )
 
+// Unicode symbols for every planet
 val symbolMap: Map<String, Char> = mapOf(
     "Mercury" to Char(0x263F),
     "Venus" to Char(0x2640),
     "Mars" to Char(0x2642),
-    "Earth" to Char(0x2642),
+    "Earth" to Char(0x2642), // Not used, can be anything
     "Jupiter" to Char(0x2643),
     "Saturn" to Char(0x2644),
     "Uranus" to Char(0x26E2),

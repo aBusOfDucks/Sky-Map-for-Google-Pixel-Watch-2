@@ -1,7 +1,6 @@
 package com.example.skymap.presentation
 
 import android.graphics.RectF
-import android.util.Log
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.EaseInOut
 import androidx.compose.animation.core.RepeatMode
@@ -15,7 +14,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -46,7 +44,6 @@ import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.tooling.preview.Devices
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.sp
@@ -112,8 +109,7 @@ open class SkyPoint(open var azimuth : Double, open var altitude : Double) {
     }
 }
 
-class PackedFloat(var v: Float) {
-}
+class PackedFloat(var v: Float)
 
 fun calculateNorthPosition(phi: Float, upsideDown: Boolean) : Offset {
     // Normally, the equation of converting angle and radius to x and y is
@@ -242,7 +238,7 @@ fun WearApp(
                     drawCircle(color = backgroundColor, radius = WATCHFACE_RADIUS)
 
                     // Sky structures (galaxies, nebulae etc.)
-                    if (zoom >= STRUCTURES_SHOW_ZOOM && settingsState[INDEX_DEEP_SKY] != DEEP_SKY_HIDE) {
+                    if (zoom >= STRUCTURES_SHOW_ZOOM && showStructures(settingsState[INDEX_DEEP_SKY])) {
                         drawSkyStructures(skyStructures, zoom, settingsState, position, mapAzimuth, upsideDown, textMeasurer)
                     }
 
@@ -348,8 +344,8 @@ fun DrawScope.drawConstellations(
         for (line in constellation.lines) {
             val a_id = line.first
             val b_id = line.second
-            val star_a: Star? = findStarById(stars, a_id);
-            val star_b: Star? = findStarById(stars, b_id);
+            val star_a: Star? = findStarById(stars, a_id)
+            val star_b: Star? = findStarById(stars, b_id)
             if (star_a == null || star_b == null) {
                 continue
             }
@@ -358,7 +354,7 @@ fun DrawScope.drawConstellations(
             val center_a = star_a.calculatePosition(position, zoom, -mapAzimuth, upsideDown)
             val center_b = star_b.calculatePosition(position, zoom, -mapAzimuth, upsideDown)
 
-            drawLine(color.copy(alpha = 0.25F), center_a, center_b);
+            drawLine(color.copy(alpha = 0.25F), center_a, center_b)
         }
 
     }
@@ -378,8 +374,8 @@ fun DrawScope.drawConstellationsNames(
         for (line in constellation.lines) {
             val a_id = line.first
             val b_id = line.second
-            val star_a: Star? = findStarById(stars, a_id);
-            val star_b: Star? = findStarById(stars, b_id);
+            val star_a: Star? = findStarById(stars, a_id)
+            val star_b: Star? = findStarById(stars, b_id)
             if (star_a == null || star_b == null) {
                 continue
             }
@@ -390,11 +386,11 @@ fun DrawScope.drawConstellationsNames(
             points.add(center_b)
         }
 
-        val center_point = calculateCenter(points);
+        val center_point = calculateCenter(points)
 
         val text : String = if (zoom > CONSTELLATIONS_SHOW_ZOOM) constellation.full_name else constellation.short_name
         val color = if (settingsState[INDEX_COLOR] == RED_MODE) Color.Red else Color.LightGray
-        val textLayoutResult = makeConstellationTextMeasurer(text, color, textMeasurer);
+        val textLayoutResult = makeConstellationTextMeasurer(text, color, textMeasurer)
         drawText(
             textLayoutResult,
             topLeft = center_point
@@ -405,12 +401,23 @@ fun DrawScope.drawConstellationsNames(
 }
 
 
-
+/**
+ * Draws planets onto the screen.
+ * In order for the name collision detection to work, all planets need to be given.
+ * Only draws planets for which [behindSun()] == [behindSun]
+ * @param planets the list of planets
+ * @param zoom the zoom of the screen, between 1 and [MAX_ZOOM]
+ * @param screenCenter an offset representing the center of the screen
+ * @param mapAzimuth the azimuth that the map is rotated by, in radians
+ * @param upsideDown whether the watch is upside down
+ * @param textMeasurer used for measuring text
+ * @param behindSun whether to draw planets that are behind the sun or in front of it
+ */
 fun DrawScope.drawPlanets(
     planets: List<Planet>,
     settingsState: SnapshotStateList<Int>,
     zoom: Float,
-    position: Offset,
+    screenCenter: Offset,
     mapAzimuth: Float,
     upsideDown: Boolean,
     textMeasurer: TextMeasurer,
@@ -419,7 +426,7 @@ fun DrawScope.drawPlanets(
     val textRectList : ArrayList<RectF> = ArrayList()
     for(planet in planets)
     {
-        val center = planet.calculatePosition(position, zoom, -mapAzimuth, upsideDown)
+        val center = planet.calculatePosition(screenCenter, zoom, -mapAzimuth, upsideDown)
         val color = when(settingsState[INDEX_COLOR]) {
             WHITE_MODE -> planet.color
             RED_MODE -> Color.Red
@@ -458,18 +465,30 @@ fun DrawScope.drawPlanets(
     }
 }
 
+/**
+ * Draws the Moon onto the screen.
+ * Draws the phase by multiplying the colors of [moonImage] by either [darkColor] or [lightColor]
+ * @param moon the Moon
+ * @param darkColor what color to multiply the unlit side by
+ * @param lightColor what color to multiply the lit side by
+ * @param screenCenter an offset representing the center of the screen
+ * @param mapAzimuth the azimuth that the map is rotated by, in radians
+ * @param upsideDown whether the watch is upside down
+ * @param moonImage the bitmap containing the image of the Moon's face. Needs to have transparency.
+ */
 fun DrawScope.drawMoon(
     moon: Moon,
     darkColor: Color,
     lightColor: Color,
     zoom: Float,
-    position: Offset,
+    screenCenter: Offset,
     mapAzimuth: Float,
     upsideDown: Boolean,
     moonImage: ImageBitmap) {
-    val pos = moon.calculatePosition(position, zoom, -mapAzimuth, upsideDown)
+    val pos = moon.calculatePosition(screenCenter, zoom, -mapAzimuth, upsideDown)
     val rotateAngle = moon.angle - mapAzimuth
-    // It is easier to transform a set path than to include angles and offsets in the path building
+    // It is easier to transform a set path than to include angles and offsets in the path building.
+    // Moreover, transforms are the easiest way to rotate an image.
     withTransform({
         scale(if (upsideDown) -1f else 1f, 1f, pos)
         rotateRad(rotateAngle, pos)
@@ -501,13 +520,21 @@ fun DrawScope.drawSun(
         )
 }
 
+/**
+ * Draws the face of the Moon, centered around 0,0.
+ * Draws the phase by multiplying the colors of [moonImage] by either [darkColor] or [lightColor]
+ * @param moon the Moon
+ * @param darkColor what color to multiply the unlit side by
+ * @param lightColor what color to multiply the lit side by
+ * @param moonImage the bitmap containing the image of the Moon's face. Needs to have transparency.
+ */
 fun DrawScope.drawMoonFace(moon: Moon, darkColor: Color, lightColor : Color, moonImage: ImageBitmap) {
     drawCircle(
         color = blendColors(darkColor, MOON_DARK_COLOR),
         radius = MOON_RADIUS,
         center = Offset(0f,0f)
     )
-    val path : Path = Path()
+    val path = Path()
     path.moveTo(0f, MOON_RADIUS)
 
     val waxp = moon.getWaxPoint() * MOON_RADIUS
@@ -525,6 +552,11 @@ fun DrawScope.drawMoonFace(moon: Moon, darkColor: Color, lightColor : Color, moo
     )
 }
 
+/**
+ * Adds an arc to the path representing the lit side of the moon.
+ * @param arcApexX the X coordinate of the apex of the arc
+ * @param dir the direction of the arc, 1 goes up, -1 goes down
+ */
 fun Path.addMoonArc(arcApexX : Float, dir : Float) {
     // In case drawing an oval of width close to 0 causes errors
     if (abs(arcApexX) < 1e-3) {
@@ -577,7 +609,7 @@ fun DrawScope.drawSkyStructures(
                     topLeft = center
                 )
 
-                if (zoom >= STRUCTURES_SHOW_TEXT_ZOOM && settingsState[INDEX_DEEP_SKY] == DEEP_SKY_SHOW_TEXT) {
+                if (zoom >= STRUCTURES_SHOW_TEXT_ZOOM && showStructuresText(settingsState[INDEX_DEEP_SKY])) {
                     val nameMeasured = makeStructureTextMeasurer(structure.name, color, textMeasurer)
                     val xOffset = (symbolMeasured.size.width.toFloat() - nameMeasured.size.width.toFloat()) * 0.5f
                     val yOffset = symbolMeasured.size.height.toFloat() * 0.8f
@@ -591,6 +623,9 @@ fun DrawScope.drawSkyStructures(
     }
 }
 
+/**
+ * Checks whether an offset is close to the screen of the watch
+ */
 fun isCloseToScreen(o: Offset) : Boolean {
     return  -10f <= o.x && o.x <= 2f * WATCHFACE_RADIUS + 10f &&
             -10f <= o.y && o.y <= 2f * WATCHFACE_RADIUS + 10f
@@ -616,6 +651,9 @@ fun makeConstellationTextMeasurer(text: String, color: Color, textMeasurer: Text
     )
 }
 
+/**
+ * A simple waiting screen that shows the user that the app is waiting for location data.
+ */
 @Composable
 fun WaitingScreen() {
     val a = remember {

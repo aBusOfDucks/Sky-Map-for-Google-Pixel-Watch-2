@@ -1,7 +1,6 @@
 package com.example.skymap.presentation
 
 
-import android.util.Log
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
@@ -104,8 +103,33 @@ fun showConstellationsText(state: Int) : Boolean {
 }
 
 
+fun showStructures(state: Int) : Boolean {
+    return when(state) {
+        DEEP_SKY_HIDE -> false
+        DEEP_SKY_SHOW -> true
+        DEEP_SKY_SHOW_TEXT -> true
+        else -> false
+    }
+}
+
+fun showStructuresText(state: Int) : Boolean {
+    return when(state) {
+        DEEP_SKY_HIDE -> false
+        DEEP_SKY_SHOW -> false
+        DEEP_SKY_SHOW_TEXT -> true
+        else -> false
+    }
+}
+
+
+
 const val BRIGHTNESS_MAX = 6
 
+/**
+ * The menu of the application.
+ * @param menuState a list containing the current selected settings
+ * @param menuExit will be called when the user exits from the menu
+ */
 @Composable
 fun Menu(menuState: SnapshotStateList<Int>, menuExit: () -> Unit) {
 
@@ -139,8 +163,9 @@ fun Menu(menuState: SnapshotStateList<Int>, menuExit: () -> Unit) {
             }),
             orientation = Orientation.Vertical,
             onDragStopped = { _ ->
-                // If a user stops dragging, we animate the
-                // box back to the starting position
+                // If a user stops dragging, we animate the box,
+                // either to the starting position, or outside the screen,
+                // depending on how far the screen was dragged
                 this.launch {
                     offsetY.animateTo(
                         targetValue = if (abs(offsetY.value) > height.value * 0.55) offsetY.value * 2 else 0f,
@@ -207,6 +232,7 @@ fun Menu(menuState: SnapshotStateList<Int>, menuExit: () -> Unit) {
                     padding = 2.5f
                 )
             }
+            // Special case: this button changes the color of the icon, not the icon itself
             item {
                 val cols = arrayOf(Color.White, Color.Red)
                 Box(
@@ -269,7 +295,13 @@ fun Menu(menuState: SnapshotStateList<Int>, menuExit: () -> Unit) {
     }
 }
 
-
+/**
+ * A simple composable for a button that cycles through different icons on each click
+ * @param icons an array of IDs of icons to cycle through
+ * @param startState which icon to start on
+ * @param onClick will be called with each click of the button
+ * @param padding padding of the icon
+ */
 @Composable
 fun IconChangingButton(icons: Array<Int>, startState: Int, onClick : (Int) -> Unit, padding : Float) {
     Box(modifier =
