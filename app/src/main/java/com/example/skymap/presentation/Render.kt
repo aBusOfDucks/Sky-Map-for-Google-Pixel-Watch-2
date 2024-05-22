@@ -72,7 +72,6 @@ private const val SUN_RADIUS = 12f
 private const val NAME_CUTOFF_ZOOM = 3.0f
 
 private const val STRUCTURES_FONT_SIZE = 7
-private const val STRUCTURES_SHOW_ZOOM = 3
 private const val STRUCTURES_SHOW_TEXT_ZOOM = 4.8
 
 private const val CONSTELLATION_FONT_SIZE = 6
@@ -238,7 +237,7 @@ fun WearApp(
                     drawCircle(color = backgroundColor, radius = WATCHFACE_RADIUS)
 
                     // Sky structures (galaxies, nebulae etc.)
-                    if (zoom >= STRUCTURES_SHOW_ZOOM && showStructures(settingsState[INDEX_DEEP_SKY])) {
+                    if (showStructures(settingsState[INDEX_DEEP_SKY])) {
                         drawSkyStructures(skyStructures, zoom, settingsState, position, mapAzimuth, upsideDown, textMeasurer)
                     }
 

@@ -10,18 +10,15 @@ import java.time.ZonedDateTime
 import kotlin.random.Random
 
 class SkyStructures(mag : Double, azimuth: Double, altitude: Double, id: Int, name: String) : Star(mag, azimuth, altitude, id) {
-    // TODO: change default emojis
     var symbol: Char = Char(0x2728)
     val name = name;
-
-
 
     override fun getColor(zoom: Float, colorSetting: Int, brightness : Float, scaleFactor: Float): Color {
         return when(colorSetting) {
                 WHITE_MODE -> Color.White
                 RED_MODE -> Color.Red
                 else -> Color.White
-            }.copy(alpha = 0.7f)
+            }.copy(alpha = saturate(2 * unscaledStarAlpha(brightness, zoom, mag.toFloat())))
     }
 }
 
@@ -46,7 +43,7 @@ fun calculateSkyStructures(latitude: Double, longitude: Double, skyStructuresArr
         val horizontalCoordinates = equatorialToHorizontal(latitude, longitude, equatorialCoordinates)
 
         if (horizontalCoordinates.altitude > 0) {
-            skyStructures.add( SkyStructures(mag, horizontalCoordinates.azimuth, horizontalCoordinates.altitude, 0, name))
+            skyStructures.add( SkyStructures(mag * 0.6f, horizontalCoordinates.azimuth, horizontalCoordinates.altitude, 0, name))
         }
     }
     return skyStructures

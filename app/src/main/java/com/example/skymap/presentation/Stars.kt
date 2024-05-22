@@ -4,7 +4,7 @@ import android.util.Log
 import androidx.compose.ui.graphics.Color
 import equatorialToHorizontal
 
-open class Star(private val mag : Double, azimuth: Double, altitude: Double, id: Int) : SkyPoint(azimuth, altitude) {
+open class Star(protected val mag : Double, azimuth: Double, altitude: Double, id: Int) : SkyPoint(azimuth, altitude) {
     private var size: Int = 1
     val id: Int = id;
 
@@ -29,7 +29,7 @@ open class Star(private val mag : Double, azimuth: Double, altitude: Double, id:
     }
 
     /** Makes sure a value doesn't go below 0 or above 1 */
-    private fun saturate(v : Float) : Float {
+    protected fun saturate(v : Float) : Float {
         if (v < 0f)
             return 0f
         if (v > 1f)
@@ -41,7 +41,7 @@ open class Star(private val mag : Double, azimuth: Double, altitude: Double, id:
 private const val BRIGHTNESS_INTERSECTION_POINT = 15f
 private const val SLOPE =  1 / (BRIGHTNESS_INTERSECTION_POINT * 4f - 4f)
 
-private fun unscaledStarAlpha(brightness: Float, zoom: Float, mag : Float) : Float {
+fun unscaledStarAlpha(brightness: Float, zoom: Float, mag : Float) : Float {
     /*
     The alpha is calculated using the equation that satisfies the following conditions:
     1. The effective magnitude is equal to mag + brightness / 2.
