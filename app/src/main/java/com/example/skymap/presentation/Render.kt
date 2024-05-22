@@ -82,6 +82,8 @@ open class SkyPoint(open var azimuth : Double, open var altitude : Double) {
     private var alpha: Float = 0.0f
     open val color : Color = Color.White
     open val colorRedMode: Color = Color.Red
+    private var sinAlpha = 0.0f
+    private var cosAlpha = 1.0f
 
     init {
         reproject()
@@ -90,9 +92,11 @@ open class SkyPoint(open var azimuth : Double, open var altitude : Double) {
     fun reproject() {
         r = (PROJECTION.convert(altitude) * WATCHFACE_RADIUS).toFloat()
         alpha = azimuth.toFloat()
+        sinAlpha = sin(alpha)
+        cosAlpha = cos(alpha)
     }
 
-    fun calculatePosition(userCenter : Offset, zoom : Float, phi : Float, flip: Boolean): Offset {
+    fun calculatePosition(userCenter : Offset, zoom : Float, sinPhi : Float, cosPhi : Float, flip: Boolean): Offset {
         // Normally, the equation of converting angle and radius to x and y is
         // given by x = r * cos(alpha), y = r * sin(alpha)
         // However:
@@ -102,8 +106,10 @@ open class SkyPoint(open var azimuth : Double, open var altitude : Double) {
         //    it is upside down
         // 3. The y axis goes down on the screen, higher y value mean lower on the screen
 
-        val y = - zoom * r * cos(alpha + phi)
-        val x = zoom * r * sin(alpha + phi) * if (flip) -1f else 1f
+        // cos(alpha + phi) = cos(alpha) * cos(phi) - sin(alpha) * sin(phi)
+        val y = - zoom * r * (cosAlpha * cosPhi - sinAlpha * sinPhi)
+        // sin(alpha + phi) = sin(alpha) * cos(phi) + cos(alpha) * sin(phi)
+        val x = zoom * r * (sinAlpha * cosPhi + cosAlpha * sinPhi) * if (flip) -1f else 1f
         return Offset(x, y) + userCenter
     }
 }
@@ -179,6 +185,9 @@ fun WearApp(
     // then modified.
     val moonResource = ImageBitmap.imageResource(R.drawable.full_moon)
 
+    val mapAzimuthSin = sin(mapAzimuth)
+    val mapAzimuthCos = cos(mapAzimuth)
+
     SkyMapTheme {
 
         Column(
@@ -238,11 +247,11 @@ fun WearApp(
 
                     // Sky structures (galaxies, nebulae etc.)
                     if (showStructures(settingsState[INDEX_DEEP_SKY])) {
-                        drawSkyStructures(skyStructures, zoom, settingsState, position, mapAzimuth, upsideDown, textMeasurer)
+                        drawSkyStructures(skyStructures, zoom, settingsState, position, mapAzimuthSin, mapAzimuthCos, upsideDown, textMeasurer)
                     }
 
                     // Stars
-                    drawStars(stars, zoom, settingsState, position, mapAzimuth, upsideDown)
+                    drawStars(stars, zoom, settingsState, position, mapAzimuthSin, mapAzimuthCos, upsideDown)
 
                     if (showConstellations(settingsState[INDEX_CONSTELLATION])) {
                         drawConstellations(
@@ -251,7 +260,8 @@ fun WearApp(
                             zoom,
                             settingsState,
                             position,
-                            mapAzimuth,
+                            mapAzimuthSin,
+                            mapAzimuthCos,
                             upsideDown
                         )
                     }
@@ -263,7 +273,8 @@ fun WearApp(
                             zoom,
                             settingsState,
                             position,
-                            mapAzimuth,
+                            mapAzimuthSin,
+                            mapAzimuthCos,
                             upsideDown,
                             textMeasurer
                         )
@@ -274,17 +285,17 @@ fun WearApp(
 
                     // Planets behind the Sun
                     if (showPlanets(settingsState[INDEX_PLANET])) {
-                        drawPlanets(planets, settingsState, zoom, position, mapAzimuth, upsideDown, textMeasurer, true)
+                        drawPlanets(planets, settingsState, zoom, position, mapAzimuthSin, mapAzimuthCos, upsideDown, textMeasurer, true)
                     }
 
                     // The Sun
                     if (settingsState[INDEX_SUN_MOON] and FLAG_SUN > 0) {
-                        drawSun(sun, settingsState, zoom, position, mapAzimuth, upsideDown)
+                        drawSun(sun, settingsState, zoom, position, mapAzimuthSin, mapAzimuthCos, upsideDown)
                     }
 
                     // Planets in front of the Sun
                     if (showPlanets(settingsState[INDEX_PLANET])) {
-                        drawPlanets(planets, settingsState, zoom, position, mapAzimuth, upsideDown, textMeasurer, false)
+                        drawPlanets(planets, settingsState, zoom, position, mapAzimuthSin, mapAzimuthCos, upsideDown, textMeasurer, false)
                     }
 
                     // The Moon
@@ -312,7 +323,8 @@ fun DrawScope.drawStars(
     zoom: Float,
     settingsState : SnapshotStateList<Int>,
     position : Offset,
-    mapAzimuth: Float,
+    mapAzimuthSin: Float,
+    mapAzimuthCos: Float,
     upsideDown: Boolean) {
     val brightnessF = settingsState[INDEX_BRIGHTNESS].toFloat()
     val brightnessScaleFactor = 1f / maxStarAlpha(brightnessF)
@@ -326,7 +338,7 @@ fun DrawScope.drawStars(
             drawCircle(
                 color = color,
                 radius = STAR_RADIUS,
-                center = star.calculatePosition(position, zoom, -mapAzimuth, upsideDown)
+                center = star.calculatePosition(position, zoom, -mapAzimuthSin, mapAzimuthCos, upsideDown)
             )
         }
     }
@@ -337,7 +349,8 @@ fun DrawScope.drawConstellations(
     zoom: Float,
     settingsState : SnapshotStateList<Int>,
     position : Offset,
-    mapAzimuth: Float,
+    mapAzimuthSin: Float,
+    mapAzimuthCos: Float,
     upsideDown: Boolean) {
     for (constellation in constellations) {
         for (line in constellation.lines) {
@@ -350,8 +363,8 @@ fun DrawScope.drawConstellations(
             }
 
             val color = if (settingsState[INDEX_COLOR] == RED_MODE) Color.Red else Color.White
-            val center_a = star_a.calculatePosition(position, zoom, -mapAzimuth, upsideDown)
-            val center_b = star_b.calculatePosition(position, zoom, -mapAzimuth, upsideDown)
+            val center_a = star_a.calculatePosition(position, zoom, -mapAzimuthSin, mapAzimuthCos, upsideDown)
+            val center_b = star_b.calculatePosition(position, zoom, -mapAzimuthSin, mapAzimuthCos, upsideDown)
 
             drawLine(color.copy(alpha = 0.25F), center_a, center_b)
         }
@@ -365,7 +378,8 @@ fun DrawScope.drawConstellationsNames(
     zoom: Float,
     settingsState : SnapshotStateList<Int>,
     position : Offset,
-    mapAzimuth: Float,
+    mapAzimuthSin: Float,
+    mapAzimuthCos: Float,
     upsideDown: Boolean,
     textMeasurer: TextMeasurer) {
     for (constellation in constellations) {
@@ -378,8 +392,8 @@ fun DrawScope.drawConstellationsNames(
             if (star_a == null || star_b == null) {
                 continue
             }
-            val center_a = star_a.calculatePosition(position, zoom, -mapAzimuth, upsideDown)
-            val center_b = star_b.calculatePosition(position, zoom, -mapAzimuth, upsideDown)
+            val center_a = star_a.calculatePosition(position, zoom, -mapAzimuthSin, mapAzimuthCos, upsideDown)
+            val center_b = star_b.calculatePosition(position, zoom, -mapAzimuthSin, mapAzimuthCos, upsideDown)
 
             points.add(center_a)
             points.add(center_b)
@@ -407,7 +421,8 @@ fun DrawScope.drawConstellationsNames(
  * @param planets the list of planets
  * @param zoom the zoom of the screen, between 1 and [MAX_ZOOM]
  * @param screenCenter an offset representing the center of the screen
- * @param mapAzimuth the azimuth that the map is rotated by, in radians
+ * @param mapAzimuthSin the sine of the azimuth that the map is rotated by,
+ * @param mapAzimuthCos the cosine of the azimuth that the map is rotated by,
  * @param upsideDown whether the watch is upside down
  * @param textMeasurer used for measuring text
  * @param behindSun whether to draw planets that are behind the sun or in front of it
@@ -417,7 +432,8 @@ fun DrawScope.drawPlanets(
     settingsState: SnapshotStateList<Int>,
     zoom: Float,
     screenCenter: Offset,
-    mapAzimuth: Float,
+    mapAzimuthSin: Float,
+    mapAzimuthCos: Float,
     upsideDown: Boolean,
     textMeasurer: TextMeasurer,
     behindSun : Boolean
@@ -425,7 +441,7 @@ fun DrawScope.drawPlanets(
     val textRectList : ArrayList<RectF> = ArrayList()
     for(planet in planets)
     {
-        val center = planet.calculatePosition(screenCenter, zoom, -mapAzimuth, upsideDown)
+        val center = planet.calculatePosition(screenCenter, zoom, -mapAzimuthSin, mapAzimuthCos, upsideDown)
         val color = when(settingsState[INDEX_COLOR]) {
             WHITE_MODE -> planet.color
             RED_MODE -> Color.Red
@@ -484,7 +500,7 @@ fun DrawScope.drawMoon(
     mapAzimuth: Float,
     upsideDown: Boolean,
     moonImage: ImageBitmap) {
-    val pos = moon.calculatePosition(screenCenter, zoom, -mapAzimuth, upsideDown)
+    val pos = moon.calculatePosition(screenCenter, zoom, sin(-mapAzimuth), cos(-mapAzimuth), upsideDown)
     val rotateAngle = moon.angle - mapAzimuth
     // It is easier to transform a set path than to include angles and offsets in the path building.
     // Moreover, transforms are the easiest way to rotate an image.
@@ -502,10 +518,11 @@ fun DrawScope.drawSun(
     settingsState: SnapshotStateList<Int>,
     zoom: Float,
     position: Offset,
-    mapAzimuth: Float,
+    mapAzimuthSin: Float,
+    mapAzimuthCos: Float,
     upsideDown: Boolean,
 ) {
-        val center = sun.calculatePosition(position, zoom, -mapAzimuth, upsideDown)
+        val center = sun.calculatePosition(position, zoom, -mapAzimuthSin, mapAzimuthCos, upsideDown)
         val color = when(settingsState[INDEX_COLOR]) {
             WHITE_MODE -> sun.color
             RED_MODE -> sun.colorRedMode
@@ -590,7 +607,8 @@ fun DrawScope.drawSkyStructures(
     zoom: Float,
     settingsState : SnapshotStateList<Int>,
     position : Offset,
-    mapAzimuth: Float,
+    mapAzimuthSin: Float,
+    mapAzimuthCos: Float,
     upsideDown: Boolean,
     textMeasurer: TextMeasurer) {
     for(structure in skyStructures)
@@ -599,7 +617,7 @@ fun DrawScope.drawSkyStructures(
         val color = structure.getColor(zoom, settingsState[INDEX_COLOR], 0f,1f)
         if(color.alpha > 0)
         {
-            val center = structure.calculatePosition(position, zoom, -mapAzimuth, upsideDown)
+            val center = structure.calculatePosition(position, zoom, -mapAzimuthSin, mapAzimuthCos, upsideDown)
             if (isCloseToScreen(center)) {
                 val symbol : String = "" + structure.symbol
                 val symbolMeasured = makeStructureTextMeasurer(symbol, color, textMeasurer)
