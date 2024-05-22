@@ -2,12 +2,6 @@ package com.example.skymap.presentation
 
 import android.util.Log
 import androidx.compose.ui.graphics.Color
-import equatorialToHorizontal
-import java.time.LocalDateTime
-import java.time.ZoneId
-import java.time.ZoneOffset
-import java.time.ZonedDateTime
-import kotlin.random.Random
 
 class SkyStructures(mag : Double, azimuth: Double, altitude: Double, id: Int, name: String) : Star(mag, azimuth, altitude, id) {
     var symbol: Char = Char(0x2728)

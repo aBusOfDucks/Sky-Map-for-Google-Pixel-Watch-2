@@ -1,10 +1,6 @@
 package com.example.skymap.presentation
 
 import androidx.compose.ui.graphics.Color
-import calculateGeocentricPositions
-import equatorialToHorizontal
-import getJulianDate
-import getPlanetObjects
 import kotlin.math.abs
 import kotlin.math.cos
 import kotlin.math.sin
@@ -132,16 +128,11 @@ class Planet(
         if (M < -180) M += 360
 
         val E_0 = M - toDegrees(e) * sin(toRadians(M))
-
-        // in degrees
         val E = calculateEccentricAnomaly(M, e, E_0)
 
         // heliocentric coordinates
         val x_h = a * (cos(toRadians(E)) - e)
         val y_h = a * sqrt(1 - e * e) * sin(toRadians(E))
-
-        // distance From Sun
-        //val r_h = sqrt(x_h * x_h + y_h * y_h)
 
         val heliocentricOrbitalCoordinates = HeliocentricOrbitalCoordinates(x_h, y_h, 0.0)
 

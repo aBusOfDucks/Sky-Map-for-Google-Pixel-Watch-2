@@ -1,15 +1,7 @@
-import com.example.skymap.presentation.ECLIPTIC_ANGLE
-import com.example.skymap.presentation.GeocentricEclipticCoordinates
-import com.example.skymap.presentation.GeocentricEquatorialCoordinates
-import com.example.skymap.presentation.GeocentricHorizontalCoordinates
-import com.example.skymap.presentation.HeliocentricEclipticCoordinates
-import com.example.skymap.presentation.Planet
-import com.example.skymap.presentation.toDegrees
-import com.example.skymap.presentation.toRadians
-import com.example.skymap.presentation.zonedDateTimeNow
+package com.example.skymap.presentation
+
 import java.time.Duration
 import java.time.LocalTime
-import java.time.ZonedDateTime
 import kotlin.math.PI
 import kotlin.math.asin
 import kotlin.math.atan
@@ -60,8 +52,7 @@ fun getJulianDate(): Double {
 /**
  * Function calculates Greenwich Mean Sidereal Time of observation
  * and then changes unit to radian.
- * @param time Greenwich Mean Time of observation [ZonedDateTime]
- * @return hour angle of Greenwich Mean Sidereal Time at time
+ * @return hour angle of Greenwich Mean Sidereal Time
  * of an observation in radians [Double]
  */
 private fun getGMST(): Double {
@@ -84,8 +75,9 @@ private fun getGMST(): Double {
 }
 
 /**
- * Function that changes equatorial coordinates of an object to horizontal coordinates,
- * dependent on an observer.
+ * Function changes equatorial coordinates of an object to horizontal coordinates.
+ * @param latitudeDegree observer's latitude in degrees [Double]
+ * @param longitudeDegree observer's longitude in degrees [Double]
  * @param equatorial equatorial coordinates of an object [GeocentricEquatorialCoordinates]
  * @return horizontal coordinates in radians [GeocentricHorizontalCoordinates]
  */
