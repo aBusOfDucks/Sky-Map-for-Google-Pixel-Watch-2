@@ -1,6 +1,5 @@
 package com.example.skymap.presentation
 
-
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
@@ -38,7 +37,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import com.example.skymap.R
-
 
 const val INDEX_CONSTELLATION = 0
 const val INDEX_PLANET = 1

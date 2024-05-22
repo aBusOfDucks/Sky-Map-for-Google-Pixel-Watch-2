@@ -2,7 +2,6 @@ package com.example.skymap.presentation
 
 import android.util.Log
 import androidx.compose.ui.graphics.Color
-import equatorialToHorizontal
 
 open class Star(private val mag : Double, azimuth: Double, altitude: Double, id: Int) : SkyPoint(azimuth, altitude) {
     private var size: Int = 1

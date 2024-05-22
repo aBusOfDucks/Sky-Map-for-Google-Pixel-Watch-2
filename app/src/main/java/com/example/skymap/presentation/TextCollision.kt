@@ -1,7 +1,6 @@
 package com.example.skymap.presentation
 
 import android.graphics.RectF
-import android.util.Log
 import androidx.compose.ui.geometry.Offset
 
 /**

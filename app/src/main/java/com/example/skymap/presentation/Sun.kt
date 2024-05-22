@@ -1,11 +1,7 @@
 package com.example.skymap.presentation
 
-import getPlanetObjects
 import androidx.compose.ui.graphics.Color
-import calculateGeocentricPositions
 import com.google.gson.JsonArray
-import equatorialToHorizontal
-import getJulianDate
 
 class Sun(azimuth : Double, altitude : Double) : SkyPoint(azimuth,altitude) {
     override val color : Color = Color(255,255,0)

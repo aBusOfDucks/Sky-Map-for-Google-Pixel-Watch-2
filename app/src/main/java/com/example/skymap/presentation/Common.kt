@@ -19,6 +19,7 @@ data class GeocentricEquatorialCoordinates(val rightAscension: Double, val decli
 // radians, radians
 data class GeocentricHorizontalCoordinates(val altitude: Double, val azimuth: Double)
 
+// radians, radians, au
 data class GeocentricEclipticCoordinates(val longitude: Double, val latitude: Double, val r: Double = 0.0)
 
 fun toDegrees(n: Double) : Double {

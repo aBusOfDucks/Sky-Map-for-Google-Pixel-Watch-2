@@ -1,9 +1,6 @@
 package com.example.skymap.presentation
 
 import androidx.compose.ui.graphics.Color
-import eclipticToEquatorial
-import equatorialToHorizontal
-import getJulianDate
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.acos
@@ -65,8 +62,6 @@ class Moon(
 }
 
 private fun calculateMoonPosition(latitude : Double, longitude : Double) : GeocentricEclipticCoordinates {
-    val time = zonedDateTimeNow()
-
     val JED = getJulianDate()
     val deltaT = JED - J2000 // days
 
@@ -86,7 +81,7 @@ private fun calculateMoonPosition(latitude : Double, longitude : Double) : Geoce
     lambdaS %= 360
     lambdaS = toRadians(lambdaS)
 
-    val D = lambda - lambdaS // rad
+    val D = lambda - lambdaS // radians
 
     // radians
     val q1 = 2 * e * sin(M) + 1.430 * e * e * sin (2 * M)

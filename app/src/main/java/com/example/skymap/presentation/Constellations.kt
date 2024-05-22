@@ -1,7 +1,6 @@
 package com.example.skymap.presentation
 
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Color
 import com.google.gson.JsonArray
 
 class Constellation (short_name: String, full_name: String, lines: ArrayList<Pair<Int, Int> >) {
