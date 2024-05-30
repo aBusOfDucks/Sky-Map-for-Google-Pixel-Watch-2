@@ -53,6 +53,8 @@ fun calculatePlanets(
         planet.setDistance(equatorialPositions.r)
     }
 
+    planetObjects.reverse()
+
     return planetObjects
 }
 
